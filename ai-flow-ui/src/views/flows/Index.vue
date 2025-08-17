@@ -232,7 +232,7 @@ class LLMNodeView extends RectNode {
       style: 'cursor: pointer;',
       onClick: () => {
         // emit a custom event for Vue layer to open the add menu for this node
-        ;(this as any).graphModel?.eventCenter?.emit('llm:plus-click', { id })
+        ;(this as any).props?.model?.graphModel?.eventCenter?.emit('llm:plus-click', { id })
       }
     }, [plusCircle, plusV, plusH])
     return h('g', {}, [rect, plusGroup])
