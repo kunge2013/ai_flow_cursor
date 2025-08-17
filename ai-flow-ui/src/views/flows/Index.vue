@@ -65,7 +65,14 @@
               <div class="add-menu">
                 <el-button text @click="onChooseAddFor(ov.id, 'llm')">LLM</el-button>
                 <el-button text @click="onChooseAddFor(ov.id, 'classifier')">分类器</el-button>
-                <el-button text @click="onChooseAddFor(ov.id, 'end')">结束</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'kb')">知识库</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'branch')">条件分支</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'script')">脚本执行</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'java')">Java增强</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'http')">HTTP请求</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'subflow')">子流程</el-button>
+                <el-button text @click="onChooseAddFor(ov.id, 'reply')">直接回复</el-button>
+                <el-button text type="danger" @click="onChooseAddFor(ov.id, 'end')">结束</el-button>
               </div>
               <template #reference>
                 <el-button type="primary" circle><el-icon><Plus /></el-icon></el-button>
@@ -123,7 +130,7 @@ import { computed, reactive, ref } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import LogicFlow, { RectNode, RectNodeModel } from '@logicflow/core'
+import LogicFlow, { RectNode, RectNodeModel, h } from '@logicflow/core'
 import { MiniMap, SelectionSelect, Control } from '@logicflow/extension'
 
 // Register LogicFlow plugins once (v2 uses static use)
@@ -193,7 +200,44 @@ class LLMNodeModel extends RectNodeModel {
     this.width = 140; this.height = 52
   }
 }
-class LLMNodeView extends RectNode {}
+class LLMNodeView extends RectNode {
+  getShape() {
+    const { width, height, x, y, id } = this.props.model
+    const rect = h('rect', {
+      x: x - width / 2,
+      y: y - height / 2,
+      width,
+      height,
+      rx: 6,
+      ry: 6,
+      stroke: '#409eff',
+      fill: '#fff',
+      strokeWidth: 1
+    })
+    // plus button at right center
+    const r = 10
+    const cx = x + width / 2 + r + 2
+    const cy = y
+    const plusCircle = h('circle', {
+      cx,
+      cy,
+      r,
+      fill: '#409eff',
+      stroke: 'transparent'
+    })
+    const plusV = h('line', { x1: cx, y1: cy - 5, x2: cx, y2: cy + 5, stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round' })
+    const plusH = h('line', { x1: cx - 5, y1: cy, x2: cx + 5, y2: cy, stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round' })
+    const plusGroup = h('g', {
+      className: 'llm-plus-btn',
+      style: 'cursor: pointer;',
+      onClick: () => {
+        // emit a custom event for Vue layer to open the add menu for this node
+        ;(this as any).graphModel?.eventCenter?.emit('llm:plus-click', { id })
+      }
+    }, [plusCircle, plusV, plusH])
+    return h('g', {}, [rect, plusGroup])
+  }
+}
 
 class ClassifierNodeModel extends RectNodeModel {
   setAttributes() {
@@ -246,6 +290,11 @@ async function nextTickInit() {
   registerNodes()
   const { graph } = getCurrentFlow()
   lf.render(graph || emptyGraph())
+  lf.on('llm:plus-click', ({ id }: { id: string }) => {
+    if (plusVisible[id] === undefined) plusVisible[id] = false
+    plusVisible[id] = !plusVisible[id]
+    updateNodePlusOverlays()
+  })
 
   lf.on('selection:selected', ({ nodes }) => {
     selected.value = nodes?.[0] || null
@@ -284,7 +333,10 @@ function updateNodePlusOverlays() {
   nodeOverlays.value = overlays
 }
 
-function onChooseAddFor(sourceId: string, type: 'llm' | 'classifier' | 'end') {
+function onChooseAddFor(
+  sourceId: string,
+  type: 'llm' | 'classifier' | 'kb' | 'branch' | 'script' | 'java' | 'http' | 'subflow' | 'reply' | 'end'
+) {
   if (!lf) return
   plusVisible[sourceId] = false
   const data = lf.getGraphData() as any
@@ -297,6 +349,20 @@ function onChooseAddFor(sourceId: string, type: 'llm' | 'classifier' | 'end') {
     lf.addNode({ id: newId, type: 'llm', x: baseX + 180, y: baseY, text: 'LLM', properties: { title: 'LLM', model: 'gpt-4o-mini', input: '', output: 'result' } })
   } else if (type === 'classifier') {
     lf.addNode({ id: newId, type: 'classifier', x: baseX + 180, y: baseY, text: '分类器', properties: { title: '分类器', labels: 'A,B', output: 'label' } })
+  } else if (type === 'kb') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '知识库', properties: { kind: 'kb' } })
+  } else if (type === 'branch') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '条件分支', properties: { kind: 'branch' } })
+  } else if (type === 'script') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '脚本执行', properties: { kind: 'script' } })
+  } else if (type === 'java') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: 'Java增强', properties: { kind: 'java' } })
+  } else if (type === 'http') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: 'HTTP请求', properties: { kind: 'http' } })
+  } else if (type === 'subflow') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '子流程', properties: { kind: 'subflow' } })
+  } else if (type === 'reply') {
+    lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '直接回复', properties: { kind: 'reply' } })
   } else if (type === 'end') {
     lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '结束', properties: { role: 'end' } })
   }
