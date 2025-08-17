@@ -61,7 +61,7 @@
             class="node-plus"
             :style="{ left: ov.left, top: ov.top }"
           >
-            <el-popover v-model:visible="plusVisible[ov.id]" trigger="click" placement="left-start" width="160">
+            <el-popover v-model:visible="plusVisible[ov.id]" trigger="click" placement="right-start" width="160" teleported persistent>
               <div class="add-menu">
                 <el-button text @click="onChooseAddFor(ov.id, 'llm')">LLM</el-button>
                 <el-button text @click="onChooseAddFor(ov.id, 'classifier')">分类器</el-button>
@@ -293,7 +293,6 @@ async function nextTickInit() {
   lf.on('llm:plus-click', ({ id }: { id: string }) => {
     if (plusVisible[id] === undefined) plusVisible[id] = false
     plusVisible[id] = !plusVisible[id]
-    updateNodePlusOverlays()
   })
 
   lf.on('selection:selected', ({ nodes }) => {
