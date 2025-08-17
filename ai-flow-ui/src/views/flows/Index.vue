@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, nextTick } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
@@ -181,7 +181,10 @@ function onCreateClosed() { createForm.name = ''; createForm.description = '' }
 function openEditor(id: string) {
   currentFlowId.value = id
   page.value = 'editor'
-  nextTickInit()
+  // Defer init until DOM updates
+  nextTick().then(() => {
+    nextTickInit()
+  })
 }
 function backToList() { page.value = 'list' }
 
@@ -255,11 +258,14 @@ function waitForCanvasReady(): Promise<HTMLDivElement> {
   return new Promise((resolve) => {
     const check = () => {
       const el = canvasRef.value as HTMLDivElement | undefined
-      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
-        resolve(el)
-      } else {
-        requestAnimationFrame(check)
+      if (el && el.isConnected) {
+        const rect = el.getBoundingClientRect()
+        if (rect.width > 0 && rect.height > 0) {
+          resolve(el)
+          return
+        }
       }
+      requestAnimationFrame(check)
     }
     check()
   })
