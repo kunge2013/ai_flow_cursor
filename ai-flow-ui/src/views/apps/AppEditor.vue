@@ -131,7 +131,7 @@ async function onSubmit() {
     ElMessage.success('已保存')
     router.push('/apps')
   } else {
-    const created = store.createApp({ ...form })
+    store.createApp({ ...form })
     ElMessage.success('已创建')
     router.push('/apps')
   }
