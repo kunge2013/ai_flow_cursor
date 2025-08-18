@@ -1,0 +1,4 @@
+# Ignore compiled Java class files
+*.class
+# Build output
+target/ 
