@@ -6,7 +6,7 @@
           <el-input v-model="query.name" placeholder="请输入流程名称" clearable />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary">查询</el-button>
+          <el-button type="primary" @click="onSearch">查询</el-button>
           <el-button @click="reset">重置</el-button>
           <el-button type="success" @click="openCreate">添加流程</el-button>
         </el-form-item>
@@ -126,10 +126,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, nextTick } from 'vue'
+import { computed, reactive, ref, nextTick, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import { listFlows, createFlow, getFlowGraph, saveFlowGraph, type FlowSummary, type FlowUpsertRequest, type FlowGraph } from '../../api/flows'
 import LogicFlow, { RectNode, RectNodeModel, h } from '@logicflow/core'
 import { MiniMap, SelectionSelect, Control } from '@logicflow/extension'
 
@@ -145,36 +146,39 @@ function ensurePlugins() {
 }
 
 // flow data
-interface FlowDef { id: string; name: string; description?: string; graph?: any }
-const STORAGE_KEY = 'ai_flow_flows'
 
 const query = reactive({ name: '' })
-const flows = ref<FlowDef[]>(loadFlows())
+const flows = ref<FlowSummary[]>([])
 const page = ref<'list' | 'editor'>('list')
 const currentFlowId = ref<string>('')
+
+async function fetchFlows() {
+  flows.value = await listFlows({ name: query.name || undefined })
+}
+
+onMounted(fetchFlows)
 
 const filteredFlows = computed(() => {
   const name = query.name.trim()
   return flows.value.filter(f => (name ? f.name.includes(name) : true))
 })
 
-function reset() { query.name = '' }
+function onSearch() { fetchFlows() }
+function reset() { query.name = ''; fetchFlows() }
 
 const createVisible = ref(false)
 const createFormRef = ref<FormInstance>()
-const createForm = reactive<Pick<FlowDef, 'name' | 'description'>>({ name: '', description: '' })
-const createRules = reactive<FormRules<FlowDef>>({
+const createForm = reactive<FlowUpsertRequest>({ name: '', description: '' })
+const createRules = reactive<FormRules<FlowUpsertRequest>>({
   name: [{ required: true, message: '请输入流程名称', trigger: 'blur' }]
 })
 
 function openCreate() { createVisible.value = true }
 async function onCreateConfirm() {
   await createFormRef.value?.validate()
-  const id = genId()
-  flows.value.unshift({ id, name: createForm.name, description: createForm.description || '', graph: startGraph() })
-  saveFlows()
+  const created = await createFlow({ name: createForm.name, description: createForm.description || '' })
   createVisible.value = false
-  openEditor(id)
+  openEditor(created.id)
 }
 function onCreateClosed() { createForm.name = ''; createForm.description = '' }
 
@@ -294,8 +298,21 @@ async function nextTickInit() {
     grid: true,
   })
   registerNodes()
-  const { graph } = getCurrentFlow()
-  lf.render(graph || emptyGraph())
+  const graph = await getFlowGraph(currentFlowId.value).catch(() => emptyGraph())
+  const normalized = {
+    nodes: (graph?.nodes || []).map((n: any) => ({
+      ...n,
+      x: typeof n.x === 'number' ? n.x : 0,
+      y: typeof n.y === 'number' ? n.y : 0,
+    })),
+    edges: (graph?.edges || []).map((e: any) => ({
+      id: e.id || `e-${genId()}`,
+      sourceNodeId: e.sourceNodeId,
+      targetNodeId: e.targetNodeId,
+      label: e.label
+    }))
+  }
+  lf.render(normalized as any)
   lf.on('llm:plus-click', ({ id }: { id: string }) => {
     if (plusVisible[id] === undefined) plusVisible[id] = false
     plusVisible[id] = !plusVisible[id]
@@ -386,29 +403,14 @@ function addLLM() {
 
 function saveFlow() {
   if (!lf) return
-  const data = lf.getGraphData() as any
-  const f = getCurrentFlow()
-  f.graph = data
-  saveFlows()
-  ElMessage.success('已保存')
-}
-
-function getCurrentFlow(): FlowDef {
-  const f = flows.value.find(x => x.id === currentFlowId.value)
-  if (!f) throw new Error('Flow not found')
-  return f
+  const data = lf.getGraphData() as FlowGraph
+  saveFlowGraph(currentFlowId.value, data).then(() => {
+    ElMessage.success('已保存')
+  })
 }
 
 function genId() { return Math.random().toString(36).slice(2, 10) }
-function loadFlows(): FlowDef[] {
-  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : [] } catch { return [] }
-}
-function saveFlows() { localStorage.setItem(STORAGE_KEY, JSON.stringify(flows.value)) }
 function emptyGraph() { return { nodes: [], edges: [] } }
-function startGraph() {
-  const startId = 'start-' + genId()
-  return { nodes: [{ id: startId, type: 'rect', x: 200, y: 120, text: '开始', properties: { role: 'start' } }], edges: [] }
-}
 </script>
 
 <style scoped>

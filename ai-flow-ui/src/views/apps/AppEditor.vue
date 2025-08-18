@@ -55,21 +55,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watchEffect } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import type { FormInstance, FormRules, UploadFile, UploadFiles } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppsStore, type AiApp } from '../../stores/apps'
 import { ElMessage } from 'element-plus'
+import { getApp, createApp, updateApp, type AiAppUpsertRequest } from '../../api/apps'
 
 const route = useRoute()
 const router = useRouter()
-const store = useAppsStore()
 
 const isEdit = computed(() => Boolean(route.params.id))
 
 const formRef = ref<FormInstance>()
-const form = reactive<Pick<AiApp, 'name' | 'description' | 'iconUrl' | 'appType' | 'model' | 'prompt' | 'openingRemark'>>({
+const form = reactive<AiAppUpsertRequest>({
   name: '',
   description: '',
   iconUrl: '',
@@ -79,7 +78,7 @@ const form = reactive<Pick<AiApp, 'name' | 'description' | 'iconUrl' | 'appType'
   openingRemark: ''
 })
 
-const rules = reactive<FormRules<AiApp>>({
+const rules = reactive<FormRules<AiAppUpsertRequest>>({
   name: [
     { required: true, message: '请输入应用名称', trigger: 'blur' },
     { min: 2, max: 30, message: '长度为 2-30 个字符', trigger: 'blur' }
@@ -97,19 +96,17 @@ const appTypeOptions = [
   { label: '高级编排应用', value: 'advanced' }
 ]
 
-watchEffect(() => {
+onMounted(async () => {
   if (isEdit.value) {
     const id = String(route.params.id)
-    const found = store.findById(id)
-    if (found) {
-      form.name = found.name
-      form.description = found.description
-      form.iconUrl = found.iconUrl || ''
-      form.appType = found.appType
-      form.model = found.model || 'gpt-4o-mini'
-      form.prompt = found.prompt || ''
-      form.openingRemark = found.openingRemark || ''
-    }
+    const data = await getApp(id)
+    form.name = data.name
+    form.description = data.description || ''
+    form.iconUrl = data.iconUrl || ''
+    form.appType = data.appType as any
+    form.model = data.model || 'gpt-4o-mini'
+    form.prompt = data.prompt || ''
+    form.openingRemark = data.openingRemark || ''
   }
 })
 
@@ -127,11 +124,11 @@ async function onSubmit() {
   await formRef.value?.validate()
   if (isEdit.value) {
     const id = String(route.params.id)
-    store.updateApp(id, { ...form })
+    await updateApp(id, { ...form })
     ElMessage.success('已保存')
     router.push('/apps')
   } else {
-    store.createApp({ ...form })
+    await createApp({ ...form })
     ElMessage.success('已创建')
     router.push('/apps')
   }
