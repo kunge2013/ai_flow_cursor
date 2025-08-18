@@ -6,99 +6,137 @@ import com.aiflow.server.dto.FlowDtos.FlowRunResult;
 import com.aiflow.server.dto.FlowDtos.FlowSummary;
 import com.aiflow.server.dto.FlowDtos.FlowUpsertRequest;
 import com.aiflow.server.dto.FlowDtos.FlowWithGraphResponse;
+import com.aiflow.server.entity.FlowEntity;
 import com.aiflow.server.exception.NotFoundException;
 import com.aiflow.server.engine.Engine;
+import com.aiflow.server.mapper.FlowMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+@Service
+@RequiredArgsConstructor
 public class FlowService {
 
-    private final Map<String, FlowWithGraphResponse> store = new ConcurrentHashMap<>();
+    private final FlowMapper flowMapper;
+    private final ObjectMapper objectMapper;
     private Engine engine; // lazy set via setter for simplicity
 
     public void setEngine(Engine engine) { this.engine = engine; }
 
     public List<FlowSummary> list(String nameLike) {
-        return store.values().stream()
-                .filter(f -> nameLike == null || nameLike.isBlank() || f.name.toLowerCase().contains(nameLike.toLowerCase()))
-                .sorted(Comparator.comparing((FlowWithGraphResponse f) -> f.createdAt).reversed())
+        QueryWrapper<FlowEntity> wrapper = new QueryWrapper<>();
+        if (nameLike != null && !nameLike.isBlank()) {
+            wrapper.like("name", nameLike);
+        }
+        wrapper.orderByDesc("created_at");
+        
+        List<FlowEntity> entities = flowMapper.selectList(wrapper);
+        return entities.stream()
                 .map(this::toSummary)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public FlowSummary create(FlowUpsertRequest req) {
-        FlowWithGraphResponse f = new FlowWithGraphResponse();
-        f.id = IdService.newId();
-        f.name = req.name;
-        f.description = req.description;
-        f.createdAt = Instant.now();
-        f.updatedAt = f.createdAt;
-        f.graph = emptyGraph();
-        store.put(f.id, f);
-        return toSummary(f);
+        FlowEntity entity = new FlowEntity();
+        entity.setFlowId(IdService.newId());
+        entity.setName(req.name);
+        entity.setDescription(req.description);
+        entity.setGraphJson(serializeGraph(emptyGraph()));
+        
+        flowMapper.insert(entity);
+        return toSummary(entity);
     }
 
     public FlowWithGraphResponse get(String id) {
-        FlowWithGraphResponse f = store.get(id);
-        if (f == null) throw new NotFoundException("Flow not found: " + id);
-        return f;
+        FlowEntity entity = getEntityByFlowId(id);
+        return toFlowWithGraph(entity);
     }
 
     public FlowSummary update(String id, FlowUpsertRequest req) {
-        FlowWithGraphResponse f = get(id);
-        f.name = req.name;
-        f.description = req.description;
-        f.updatedAt = Instant.now();
-        return toSummary(f);
+        FlowEntity entity = getEntityByFlowId(id);
+        entity.setName(req.name);
+        entity.setDescription(req.description);
+        
+        flowMapper.updateById(entity);
+        return toSummary(entity);
     }
 
     public void delete(String id) {
-        if (store.remove(id) == null) {
-            throw new NotFoundException("Flow not found: " + id);
-        }
+        FlowEntity entity = getEntityByFlowId(id);
+        flowMapper.deleteById(entity.getId());
     }
 
     public FlowGraph getGraph(String id) {
-        return Objects.requireNonNull(get(id).graph);
+        FlowEntity entity = getEntityByFlowId(id);
+        return deserializeGraph(entity.getGraphJson());
     }
 
     public FlowGraph saveGraph(String id, FlowGraph graph) {
-        FlowWithGraphResponse f = get(id);
-        f.graph = graph != null ? graph : emptyGraph();
-        f.updatedAt = Instant.now();
-        return f.graph;
+        FlowEntity entity = getEntityByFlowId(id);
+        FlowGraph finalGraph = graph != null ? graph : emptyGraph();
+        entity.setGraphJson(serializeGraph(finalGraph));
+        
+        flowMapper.updateById(entity);
+        return finalGraph;
     }
 
     public FlowRunResult run(String id, FlowRunRequest req) {
-        FlowWithGraphResponse f = get(id);
+        FlowEntity entity = getEntityByFlowId(id);
+        FlowGraph graph = deserializeGraph(entity.getGraphJson());
+        
         if (engine == null) {
             FlowRunResult r = new FlowRunResult();
-            r.flowId = f.id;
+            r.flowId = entity.getFlowId();
             r.runId = "r_" + UUID.randomUUID();
             r.outputs = Map.of();
             r.trace = List.of();
             return r;
         }
         Map<String, Object> inputs = req != null ? req.inputs : Map.of();
-        return engine.run(f.id, f.graph, inputs);
+        return engine.run(entity.getFlowId(), graph, inputs);
+    }
+    
+    private FlowEntity getEntityByFlowId(String flowId) {
+        QueryWrapper<FlowEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("flow_id", flowId);
+        FlowEntity entity = flowMapper.selectOne(wrapper);
+        if (entity == null) {
+            throw new NotFoundException("Flow not found: " + flowId);
+        }
+        return entity;
     }
 
-    private FlowSummary toSummary(FlowWithGraphResponse f) {
+    private FlowSummary toSummary(FlowEntity entity) {
         FlowSummary s = new FlowSummary();
-        s.id = f.id;
-        s.name = f.name;
-        s.description = f.description;
-        s.createdAt = f.createdAt;
-        s.updatedAt = f.updatedAt;
+        s.id = entity.getFlowId();
+        s.name = entity.getName();
+        s.description = entity.getDescription();
+        s.createdAt = entity.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant();
+        s.updatedAt = entity.getUpdatedAt().atZone(ZoneId.systemDefault()).toInstant();
         return s;
+    }
+    
+    private FlowWithGraphResponse toFlowWithGraph(FlowEntity entity) {
+        FlowWithGraphResponse response = new FlowWithGraphResponse();
+        response.id = entity.getFlowId();
+        response.name = entity.getName();
+        response.description = entity.getDescription();
+        response.createdAt = entity.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant();
+        response.updatedAt = entity.getUpdatedAt().atZone(ZoneId.systemDefault()).toInstant();
+        response.graph = deserializeGraph(entity.getGraphJson());
+        return response;
     }
 
     private FlowGraph emptyGraph() {
@@ -106,5 +144,24 @@ public class FlowService {
         g.nodes = new ArrayList<>();
         g.edges = new ArrayList<>();
         return g;
+    }
+    
+    private String serializeGraph(FlowGraph graph) {
+        try {
+            return objectMapper.writeValueAsString(graph);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize graph", e);
+        }
+    }
+    
+    private FlowGraph deserializeGraph(String graphJson) {
+        try {
+            if (graphJson == null || graphJson.isBlank()) {
+                return emptyGraph();
+            }
+            return objectMapper.readValue(graphJson, FlowGraph.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deserialize graph", e);
+        }
     }
 } 

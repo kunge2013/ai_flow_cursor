@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +16,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/kb")
 @Tag(name = "KnowledgeBase", description = "知识库管理")
+@RequiredArgsConstructor
 public class KbController {
 
-    private final KbService kbService = new KbService();
+    private final KbService kbService;
 
     @GetMapping
     @Operation(summary = "查询知识库列表")

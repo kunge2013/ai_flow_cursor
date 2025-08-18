@@ -5,6 +5,7 @@ import com.aiflow.server.service.ModelService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +14,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/models")
 @Tag(name = "Model", description = "模型配置")
+@RequiredArgsConstructor
 public class ModelController {
 
-    private final ModelService modelService = new ModelService();
+    private final ModelService modelService;
 
     @GetMapping
     @Operation(summary = "查询模型列表")

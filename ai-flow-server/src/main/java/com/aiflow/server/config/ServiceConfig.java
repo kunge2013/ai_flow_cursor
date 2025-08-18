@@ -1,35 +1,24 @@
 package com.aiflow.server.config;
 
 import com.aiflow.server.engine.Engine;
-import com.aiflow.server.service.AppService;
 import com.aiflow.server.service.FlowService;
-import com.aiflow.server.service.KbService;
-import com.aiflow.server.service.ModelService;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+
+import jakarta.annotation.PostConstruct;
 
 @Configuration
 public class ServiceConfig {
 
-    @Bean
-    public FlowService flowService(Engine engine) {
-        FlowService s = new FlowService();
-        s.setEngine(engine);
-        return s;
-    }
+    @Autowired
+    private FlowService flowService;
+    
+    @Autowired
+    private Engine engine;
 
-    @Bean
-    public AppService appService() {
-        return new AppService();
-    }
-
-    @Bean
-    public ModelService modelService() {
-        return new ModelService();
-    }
-
-    @Bean
-    public KbService kbService() {
-        return new KbService();
+    @PostConstruct
+    public void configureServices() {
+        // Set engine for FlowService after dependency injection
+        flowService.setEngine(engine);
     }
 } 

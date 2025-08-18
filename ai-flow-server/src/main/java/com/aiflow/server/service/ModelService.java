@@ -2,6 +2,7 @@ package com.aiflow.server.service;
 
 import com.aiflow.server.dto.ModelDtos.ModelConfig;
 import com.aiflow.server.exception.NotFoundException;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+@Service
 public class ModelService {
 
     private final Map<String, ModelConfig> store = new ConcurrentHashMap<>();

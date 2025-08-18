@@ -3,6 +3,7 @@ package com.aiflow.server.service;
 import com.aiflow.server.dto.KbDtos.KnowledgeBaseSummary;
 import com.aiflow.server.dto.KbDtos.KnowledgeBaseUpsertRequest;
 import com.aiflow.server.exception.NotFoundException;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+@Service
 public class KbService {
 
     private final Map<String, KnowledgeBaseSummary> store = new ConcurrentHashMap<>();

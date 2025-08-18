@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +16,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/apps")
 @Tag(name = "App", description = "应用管理")
+@RequiredArgsConstructor
 public class AppController {
 
-    private final AppService appService = new AppService();
+    private final AppService appService;
 
     @GetMapping
     @Operation(summary = "查询应用列表")
