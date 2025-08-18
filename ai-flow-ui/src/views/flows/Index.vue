@@ -403,9 +403,31 @@ function addLLM() {
 
 function saveFlow() {
   if (!lf) return
-  const data = lf.getGraphData() as FlowGraph
+  const rawData = lf.getGraphData() as any
+  
+  // Transform LogicFlow data to match backend DTO structure
+  const data: FlowGraph = {
+    nodes: (rawData.nodes || []).map((node: any) => ({
+      id: node.id,
+      type: node.type,
+      x: typeof node.x === 'number' ? node.x : 0,
+      y: typeof node.y === 'number' ? node.y : 0,
+      text: typeof node.text === 'string' ? node.text : (node.text ? JSON.stringify(node.text) : ''),
+      properties: node.properties || {}
+    })),
+    edges: (rawData.edges || []).map((edge: any) => ({
+      id: edge.id,
+      sourceNodeId: edge.sourceNodeId,
+      targetNodeId: edge.targetNodeId,
+      label: typeof edge.label === 'string' ? edge.label : (edge.label ? JSON.stringify(edge.label) : '')
+    }))
+  }
+  
   saveFlowGraph(currentFlowId.value, data).then(() => {
     ElMessage.success('已保存')
+  }).catch((error) => {
+    console.error('Save failed:', error)
+    ElMessage.error('保存失败: ' + (error.message || '未知错误'))
   })
 }
 

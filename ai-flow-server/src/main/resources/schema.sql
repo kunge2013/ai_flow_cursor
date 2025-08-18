@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS t_app (
     name VARCHAR(255) NOT NULL COMMENT '应用名称',
     description TEXT COMMENT '应用描述',
     flow_id VARCHAR(255) COMMENT '关联流程ID',
-    config_json TEXT COMMENT '应用配置JSON',
+    config_json LONGTEXT COMMENT '应用配置JSON',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
@@ -67,3 +67,11 @@ INSERT INTO t_node_type (type_code, type_name, description, icon, category, enab
 ('subprocess', '子流程', '调用子流程节点', 'sitemap', 'control', TRUE),
 ('direct_reply', '直接回复', '直接输出回复节点', 'message', 'output', TRUE)
 ON DUPLICATE KEY UPDATE type_name=VALUES(type_name), description=VALUES(description); 
+
+
+
+-- Migration to fix config_json column size
+USE ai_flow;
+
+-- Modify config_json column from TEXT to LONGTEXT to accommodate larger JSON data
+ALTER TABLE t_app MODIFY COLUMN config_json LONGTEXT COMMENT '应用配置JSON'; 
