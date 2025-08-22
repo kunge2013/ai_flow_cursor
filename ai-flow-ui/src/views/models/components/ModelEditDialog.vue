@@ -205,6 +205,7 @@
 import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { modelApi } from '../api/modelApi'
 
 // 定义组件属性
 interface Props {
@@ -343,13 +344,19 @@ const handleSave = async () => {
     await formRef.value.validate()
     saving.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (isEdit.value) {
+      // 更新模型
+      await modelApi.updateModel(props.modelData.id, formData)
+    } else {
+      // 创建模型
+      await modelApi.createModel(formData)
+    }
     
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     emit('success')
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('保存失败:', error)
+    ElMessage.error('保存失败')
   } finally {
     saving.value = false
   }
@@ -360,18 +367,27 @@ const handleTest = async () => {
   if (!formRef.value) return
   
   try {
-    await formRef.value.validate(['apiEndpoint', 'apiKey'])
+    // 只验证必要的字段
+    const isValid = await formRef.value.validateField(['apiEndpoint', 'apiKey'])
+    if (!isValid) return
+    
     testing.value = true
     
     ElMessage.info('正在测试模型接口...')
     
-    // 模拟API测试
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const testData = {
+      modelId: props.modelData.id,
+      apiEndpoint: formData.apiEndpoint,
+      apiKey: formData.apiKey,
+      maxTokens: formData.maxTokens || 100,
+      temperature: formData.temperature || 0.7
+    }
     
-    ElMessage.success('模型接口测试成功！')
+    const result = await modelApi.testModel(testData)
+    ElMessage.success(result.data || '模型接口测试成功！')
   } catch (error) {
     console.error('测试失败:', error)
-    ElMessage.error('请检查API地址和密钥配置')
+    ElMessage.error('模型接口测试失败')
   } finally {
     testing.value = false
   }

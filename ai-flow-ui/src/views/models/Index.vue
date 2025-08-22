@@ -153,6 +153,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 import ModelEditDialog from './components/ModelEditDialog.vue'
+import { modelApi } from './api/modelApi'
 
 // 搜索表单
 const searchForm = reactive({
@@ -178,41 +179,20 @@ const currentModel = ref({})
 const getModelList = async () => {
   loading.value = true
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const params = {
+      currentPage: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      modelName: searchForm.modelName || undefined,
+      modelType: searchForm.modelType || undefined,
+      baseModel: searchForm.baseModel || undefined
+    }
     
-    // 模拟数据
-    modelList.value = [
-      {
-        id: 1,
-        modelName: 'GPT-4文本生成模型',
-        baseModel: 'GPT-4',
-        modelType: '文本生成',
-        apiEndpoint: 'https://api.openai.com/v1/chat/completions',
-        status: 'active',
-        createTime: '2024-01-15 10:30:00'
-      },
-      {
-        id: 2,
-        modelName: 'Claude图像分析模型',
-        baseModel: 'Claude',
-        modelType: '多模态',
-        apiEndpoint: 'https://api.anthropic.com/v1/messages',
-        status: 'active',
-        createTime: '2024-01-14 15:20:00'
-      },
-      {
-        id: 3,
-        modelName: 'Gemini语音识别模型',
-        baseModel: 'Gemini',
-        modelType: '语音识别',
-        apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-        status: 'inactive',
-        createTime: '2024-01-13 09:15:00'
-      }
-    ]
-    pagination.total = modelList.value.length
+    const response = await modelApi.getModelPage(params)
+    // 修复：直接使用response，因为后端返回的就是分页数据
+    modelList.value = response.records || []
+    pagination.total = response.total || 0
   } catch (error) {
+    console.error('获取模型列表失败:', error)
     ElMessage.error('获取模型列表失败')
   } finally {
     loading.value = false
@@ -265,10 +245,20 @@ const handleEdit = (row: any) => {
 const handleTest = async (row: any) => {
   try {
     ElMessage.info('正在测试模型接口...')
-    // 这里可以调用测试API
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    ElMessage.success('模型接口测试成功')
+    
+    const testData = {
+      modelId: row.id,
+      apiEndpoint: row.apiEndpoint,
+      apiKey: row.apiKey,
+      maxTokens: row.maxTokens || 100,
+      temperature: row.temperature || 0.7
+    }
+    
+    const result = await modelApi.testModel(testData)
+    // 修复：直接使用result，因为后端返回的就是测试结果
+    ElMessage.success(result || '模型接口测试成功')
   } catch (error) {
+    console.error('测试失败:', error)
     ElMessage.error('模型接口测试失败')
   }
 }
@@ -286,11 +276,14 @@ const handleDelete = async (row: any) => {
       }
     )
     
-    // 这里调用删除API
+    await modelApi.deleteModel(row.id)
     ElMessage.success('删除成功')
     getModelList()
   } catch (error) {
-    // 用户取消删除
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
   }
 }
 

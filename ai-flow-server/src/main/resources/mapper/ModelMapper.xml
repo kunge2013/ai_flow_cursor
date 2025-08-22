@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiflow.server.mapper.ModelMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.aiflow.server.entity.Model">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
+        <result column="base_model" property="baseModel" jdbcType="VARCHAR"/>
+        <result column="model_type" property="modelType" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="api_endpoint" property="apiEndpoint" jdbcType="VARCHAR"/>
+        <result column="api_key" property="apiKey" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
+        <result column="temperature" property="temperature" jdbcType="DECIMAL"/>
+        <result column="top_p" property="topP" jdbcType="DECIMAL"/>
+        <result column="frequency_penalty" property="frequencyPenalty" jdbcType="DECIMAL"/>
+        <result column="presence_penalty" property="presencePenalty" jdbcType="DECIMAL"/>
+        <result column="stop_words" property="stopWords" jdbcType="VARCHAR"/>
+        <result column="config_json" property="configJson" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="deleted" property="deleted" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 分页查询模型列表 -->
+    <select id="selectModelPage" resultMap="BaseResultMap">
+        SELECT *
+        FROM t_model
+        WHERE deleted = 0
+        <if test="modelName != null and modelName != ''">
+            AND model_name LIKE CONCAT('%', #{modelName}, '%')
+        </if>
+        <if test="modelType != null and modelType != ''">
+            AND model_type = #{modelType}
+        </if>
+        <if test="baseModel != null and baseModel != ''">
+            AND base_model = #{baseModel}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+</mapper> 

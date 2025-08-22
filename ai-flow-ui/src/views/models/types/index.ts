@@ -66,10 +66,11 @@ export interface ApiResponse<T = any> {
   success: boolean
 }
 
-// 模型列表响应
+// 模型列表响应 - 修复为与后端MyBatis-Plus分页格式一致
 export interface ModelListResponse {
-  list: ModelInfo[]
+  records: ModelInfo[]
   total: number
-  pageSize: number
-  currentPage: number
+  size: number
+  current: number
+  pages: number
 } 
