@@ -5,6 +5,8 @@ export interface KnowledgeBaseSummary {
   name: string
   description?: string
   tags?: string[]
+  vectorModel?: string
+  status?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -13,6 +15,8 @@ export interface KnowledgeBaseUpsertRequest {
   name: string
   description?: string
   tags?: string[]
+  vectorModel?: string
+  status?: boolean
 }
 
 const BASE = '/api/kb'
