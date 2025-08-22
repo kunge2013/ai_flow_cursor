@@ -1,55 +1,62 @@
 package com.aiflow.server.service;
 
-import com.aiflow.server.dto.ModelDtos.ModelConfig;
-import com.aiflow.server.exception.NotFoundException;
-import org.springframework.stereotype.Service;
+import com.aiflow.server.dto.ModelDTO;
+import com.aiflow.server.dto.ModelQueryDTO;
+import com.aiflow.server.dto.ModelTestDTO;
+import com.aiflow.server.entity.Model;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+/**
+ * 模型服务接口
+ */
+public interface ModelService extends IService<Model> {
 
-@Service
-public class ModelService {
+    /**
+     * 分页查询模型列表
+     *
+     * @param queryDTO 查询条件
+     * @return 分页结果
+     */
+    IPage<Model> getModelPage(ModelQueryDTO queryDTO);
 
-    private final Map<String, ModelConfig> store = new ConcurrentHashMap<>();
+    /**
+     * 创建模型
+     *
+     * @param modelDTO 模型信息
+     * @return 是否成功
+     */
+    boolean createModel(ModelDTO modelDTO);
 
-    public List<ModelConfig> list(Boolean enabled) {
-        return store.values().stream()
-                .filter(m -> enabled == null || enabled.equals(m.enabled))
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
+    /**
+     * 更新模型
+     *
+     * @param modelDTO 模型信息
+     * @return 是否成功
+     */
+    boolean updateModel(ModelDTO modelDTO);
 
-    public ModelConfig create(ModelConfig req) {
-        ModelConfig m = new ModelConfig();
-        m.id = IdService.newId();
-        m.name = req.name;
-        m.provider = req.provider;
-        m.model = req.model;
-        m.enabled = req.enabled != null ? req.enabled : Boolean.TRUE;
-        store.put(m.id, m);
-        return m;
-    }
+    /**
+     * 删除模型
+     *
+     * @param id 模型ID
+     * @return 是否成功
+     */
+    boolean deleteModel(Long id);
 
-    public ModelConfig get(String id) {
-        ModelConfig m = store.get(id);
-        if (m == null) throw new NotFoundException("Model not found: " + id);
-        return m;
-    }
+    /**
+     * 测试模型接口
+     *
+     * @param testDTO 测试参数
+     * @return 测试结果
+     */
+    String testModel(ModelTestDTO testDTO);
 
-    public ModelConfig update(String id, ModelConfig req) {
-        ModelConfig m = get(id);
-        m.name = req.name;
-        m.provider = req.provider;
-        m.model = req.model;
-        m.enabled = req.enabled;
-        return m;
-    }
-
-    public void delete(String id) {
-        if (store.remove(id) == null) {
-            throw new NotFoundException("Model not found: " + id);
-        }
-    }
+    /**
+     * 根据ID获取模型详情
+     *
+     * @param id 模型ID
+     * @return 模型信息
+     */
+    ModelDTO getModelById(Long id);
 } 

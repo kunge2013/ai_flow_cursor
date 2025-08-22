@@ -1,0 +1,76 @@
+### 模型管理API测试
+
+### 1. 分页查询模型列表
+GET http://localhost:8081/api/models?currentPage=1&pageSize=10
+Content-Type: application/json
+
+### 2. 根据条件查询模型
+GET http://localhost:8081/api/models?modelName=GPT&modelType=text&baseModel=gpt-4
+Content-Type: application/json
+
+### 3. 获取模型详情
+GET http://localhost:8081/api/models/1
+Content-Type: application/json
+
+### 4. 创建新模型
+POST http://localhost:8081/api/models
+Content-Type: application/json
+
+{
+  "modelName": "测试模型",
+  "baseModel": "gpt-3.5",
+  "modelType": "text",
+  "status": "active",
+  "apiEndpoint": "https://api.openai.com/v1/chat/completions",
+  "apiKey": "sk-test-key-123456",
+  "description": "这是一个测试模型",
+  "maxTokens": 2048,
+  "temperature": 0.8,
+  "topP": 0.9,
+  "frequencyPenalty": 0.0,
+  "presencePenalty": 0.0
+}
+
+### 5. 更新模型
+PUT http://localhost:8081/api/models/1
+Content-Type: application/json
+
+{
+  "modelName": "GPT-4文本生成模型-更新版",
+  "baseModel": "gpt-4",
+  "modelType": "text",
+  "status": "active",
+  "apiEndpoint": "https://api.openai.com/v1/chat/completions",
+  "apiKey": "sk-test-key-123456",
+  "description": "OpenAI GPT-4文本生成模型，支持多种自然语言处理任务",
+  "maxTokens": 8192,
+  "temperature": 0.7,
+  "topP": 1.0,
+  "frequencyPenalty": 0.0,
+  "presencePenalty": 0.0
+}
+
+### 6. 测试模型接口
+POST http://localhost:8081/api/models/test
+Content-Type: application/json
+
+{
+  "modelId": 1,
+  "apiEndpoint": "https://api.openai.com/v1/chat/completions",
+  "apiKey": "sk-test-key-123456",
+  "testInput": "Hello, this is a test message.",
+  "maxTokens": 100,
+  "temperature": 0.7
+}
+
+### 7. 获取模型类型列表
+GET http://localhost:8081/api/models/types
+Content-Type: application/json
+
+### 8. 获取基础模型列表
+GET http://localhost:8081/api/models/base-models
+Content-Type: application/json
+
+### 9. 删除模型
+DELETE http://localhost:8081/api/models/1
+Content-Type: application/json 
