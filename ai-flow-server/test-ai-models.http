@@ -1,0 +1,101 @@
+### 测试AI模型接口
+
+### 1. 获取可用的AI模型类型
+GET http://localhost:8080/api/models/ai-types
+
+### 2. 测试智普AI模型连接
+POST http://localhost:8080/api/models/test
+Content-Type: application/json
+
+{
+  "apiEndpoint": "https://open.bigmodel.cn/api/paas/v4",
+  "apiKey": "your-zhipu-api-key",
+  "testInput": "Hello, this is a test message.",
+  "maxTokens": 100,
+  "temperature": 0.7
+}
+
+### 3. 测试DeepSeek模型连接
+POST http://localhost:8080/api/models/test
+Content-Type: application/json
+
+{
+  "apiEndpoint": "https://api.deepseek.com",
+  "apiKey": "your-deepseek-api-key",
+  "testInput": "Hello, this is a test message.",
+  "maxTokens": 100,
+  "temperature": 0.7
+}
+
+### 4. 测试OpenAI模型连接
+POST http://localhost:8080/api/models/test
+Content-Type: application/json
+
+{
+  "apiEndpoint": "https://api.openai.com",
+  "apiKey": "your-openai-api-key",
+  "testInput": "Hello, this is a test message.",
+  "maxTokens": 100,
+  "temperature": 0.7
+}
+
+### 5. 创建智普AI模型配置
+POST http://localhost:8080/api/models
+Content-Type: application/json
+
+{
+  "modelName": "智普AI-GLM4",
+  "baseModel": "glm-4",
+  "modelType": "zhipu",
+  "status": "active",
+  "apiEndpoint": "https://open.bigmodel.cn/api/paas/v4",
+  "apiKey": "your-zhipu-api-key",
+  "description": "智普AI GLM-4模型",
+  "maxTokens": 4096,
+  "temperature": 0.7,
+  "topP": 1.0,
+  "frequencyPenalty": 0.0,
+  "presencePenalty": 0.0
+}
+
+### 6. 创建DeepSeek模型配置
+POST http://localhost:8080/api/models
+Content-Type: application/json
+
+{
+  "modelName": "DeepSeek-Chat",
+  "baseModel": "deepseek-chat",
+  "modelType": "deepseek",
+  "status": "active",
+  "apiEndpoint": "https://api.deepseek.com",
+  "apiKey": "your-deepseek-api-key",
+  "description": "DeepSeek Chat模型",
+  "maxTokens": 4096,
+  "temperature": 0.7,
+  "topP": 1.0,
+  "frequencyPenalty": 0.0,
+  "presencePenalty": 0.0
+}
+
+### 7. 验证AI模型配置
+POST http://localhost:8080/api/models/validate
+Content-Type: application/json
+
+{
+  "modelName": "智普AI-GLM4",
+  "baseModel": "glm-4",
+  "modelType": "zhipu",
+  "apiEndpoint": "https://open.bigmodel.cn/api/paas/v4",
+  "apiKey": "your-zhipu-api-key",
+  "maxTokens": 4096,
+  "temperature": 0.7
+}
+
+### 8. 使用AI模型生成文本（需要先创建模型配置）
+POST http://localhost:8080/api/models/1/generate?prompt=请介绍一下人工智能的发展历程&maxTokens=500&temperature=0.7
+
+### 9. 查询模型列表
+GET http://localhost:8080/api/models?currentPage=1&pageSize=10
+
+### 10. 获取模型详情
+GET http://localhost:8080/api/models/1 

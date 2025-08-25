@@ -20,7 +20,7 @@
     </el-card>
 
     <el-card>
-      <el-table :data="filtered" style="width: 100%">
+      <el-table :data="apps" style="width: 100%">
         <el-table-column label="图标" width="80">
           <template #default="{ row }">
             <el-avatar :src="row.iconUrl" :size="40">{{ row.name?.[0] }}</el-avatar>
@@ -71,23 +71,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAppsStore, type AiApp } from '../../stores/apps'
 import type { FormInstance, FormRules, UploadFile, UploadFiles } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { listApps, createApp, deleteApp, type AiAppUpsertRequest, type AiAppSummary } from '../../api/apps'
 
 const router = useRouter()
-const appsStore = useAppsStore()
 
-const query = reactive<{ name: string; appType: '' | AiApp['appType'] }>({ name: '', appType: '' })
+const query = reactive<{ name: string; appType: '' | AiAppUpsertRequest['appType'] }>({ name: '', appType: '' })
+const apps = ref<AiAppSummary[]>([])
 
-const filtered = computed(() => {
-  return appsStore.apps.filter(app => {
-    const nameOk = query.name ? app.name.includes(query.name) : true
-    const typeOk = query.appType ? app.appType === query.appType : true
-    return nameOk && typeOk
-  })
-})
+async function fetchList() {
+  apps.value = await listApps({ name: query.name || undefined, type: (query.appType as any) || undefined })
+}
+
+onMounted(fetchList)
 
 const appTypeOptions = [
   { label: '简单应用', value: 'simple' },
@@ -96,13 +95,16 @@ const appTypeOptions = [
 
 const createVisible = ref(false)
 const createFormRef = ref<FormInstance>()
-const createForm = reactive<Pick<AiApp, 'name' | 'description' | 'appType' | 'iconUrl'>>({
+const createForm = reactive<AiAppUpsertRequest>({
   name: '',
   description: '',
   appType: 'simple',
-  iconUrl: ''
+  iconUrl: '',
+  model: 'gpt-4o-mini',
+  prompt: '',
+  openingRemark: ''
 })
-const createRules = reactive<FormRules<AiApp>>({
+const createRules = reactive<FormRules<AiAppUpsertRequest>>({
   name: [
     { required: true, message: '请输入应用名称', trigger: 'blur' },
     { min: 2, max: 30, message: '长度为 2-30 个字符', trigger: 'blur' }
@@ -120,15 +122,8 @@ function openCreate() {
 }
 async function onCreateConfirm() {
   await createFormRef.value?.validate()
-  const created = appsStore.createApp({
-    name: createForm.name,
-    description: createForm.description,
-    appType: createForm.appType,
-    iconUrl: createForm.iconUrl,
-    model: 'gpt-4o-mini',
-    prompt: '',
-    openingRemark: ''
-  })
+  const created = await createApp(createForm)
+  ElMessage.success('已创建')
   createVisible.value = false
   router.push(`/apps/${created.id}/edit`)
 }
@@ -148,16 +143,19 @@ function onCreateIcon(file: UploadFile, _files: UploadFiles) {
   }
 }
 
-function onSearch() {}
+async function onSearch() { await fetchList() }
 function onReset() {
   query.name = ''
   query.appType = ''
+  fetchList()
 }
 function edit(id: string) {
   router.push(`/apps/${id}/edit`)
 }
-function remove(id: string) {
-  appsStore.removeApp(id)
+async function remove(id: string) {
+  await deleteApp(id)
+  ElMessage.success('已删除')
+  fetchList()
 }
 </script>
 

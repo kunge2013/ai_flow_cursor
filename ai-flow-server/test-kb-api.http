@@ -1,0 +1,97 @@
+### 测试知识库管理接口
+
+### 1. 创建知识库
+POST http://localhost:8081/api/kb
+Content-Type: application/json
+
+{
+  "name": "产品知识库",
+  "description": "包含公司所有产品的详细信息和常见问题解答",
+  "tags": ["产品", "FAQ", "技术支持"],
+  "vectorModel": "openai",
+  "status": true
+}
+
+### 2. 创建第二个知识库
+POST http://localhost:8081/api/kb
+Content-Type: application/json
+
+{
+  "name": "技术文档库",
+  "description": "技术架构、API文档、开发指南等技术相关内容",
+  "tags": ["技术", "API", "开发"],
+  "vectorModel": "zhipu",
+  "status": true
+}
+
+### 3. 查询知识库列表
+GET http://localhost:8081/api/kb?page=1&size=10
+
+### 4. 按名称搜索
+GET http://localhost:8081/api/kb?name=产品&page=1&size=10
+
+### 5. 获取知识库详情
+GET http://localhost:8081/api/kb/{{kbId}}
+
+### 6. 更新知识库
+PUT http://localhost:8081/api/kb/{{kbId}}
+Content-Type: application/json
+
+{
+  "name": "产品知识库-更新版",
+  "description": "更新后的产品知识库描述",
+  "tags": ["产品", "FAQ", "技术支持", "更新"],
+  "vectorModel": "openai",
+  "status": true
+}
+
+### 7. 添加文档到知识库
+POST http://localhost:8081/api/kb/{{kbId}}/documents
+Content-Type: application/json
+
+{
+  "title": "产品介绍文档",
+  "content": "这是一个产品介绍文档，包含了产品的详细信息和特点。产品具有高性能、易用性和稳定性等优势。",
+  "type": "text",
+  "size": 100
+}
+
+### 8. 添加第二个文档
+POST http://localhost:8081/api/kb/{{kbId}}/documents
+Content-Type: application/json
+
+{
+  "title": "常见问题解答",
+  "content": "Q: 如何安装产品？\nA: 按照安装向导进行安装即可。\n\nQ: 产品支持哪些平台？\nA: 支持Windows、Linux和MacOS。",
+  "type": "text",
+  "size": 200
+}
+
+### 9. 获取文档列表
+GET http://localhost:8081/api/kb/{{kbId}}/documents
+
+### 10. 命中测试
+POST http://localhost:8081/api/kb/{{kbId}}/test
+Content-Type: application/json
+
+{
+  "query": "如何安装产品",
+  "topK": 3,
+  "scoreThreshold": 0.5
+}
+
+### 11. 另一个测试查询
+POST http://localhost:8081/api/kb/{{kbId}}/test
+Content-Type: application/json
+
+{
+  "query": "产品特点",
+  "topK": 2,
+  "scoreThreshold": 0.6
+}
+
+### 12. 删除文档
+DELETE http://localhost:8081/api/kb/{{kbId}}/documents/{{documentId}}
+
+### 13. 删除知识库
+DELETE http://localhost:8081/api/kb/{{kbId}} 

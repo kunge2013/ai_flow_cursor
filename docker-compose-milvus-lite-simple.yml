@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Milvus Lite 向量数据库 (简化版)
+  milvus-lite:
+    image: milvusdb/milvus-lite:latest
+    container_name: milvus-lite
+    ports:
+      - "19530:19530"  # Milvus gRPC端口
+      - "9091:9091"    # Milvus HTTP端口
+    environment:
+      - MILVUS_HOST=0.0.0.0
+      - MILVUS_PORT=19530
+    volumes:
+      - milvus_data:/var/lib/milvus
+      - milvus_logs:/var/log/milvus
+    networks:
+      - milvus-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  milvus_data:
+    driver: local
+  milvus_logs:
+    driver: local
+
+networks:
+  milvus-network:
+    driver: bridge 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- 基础流程规则配置 -->
+    <chain name="basicChain">
+        THEN(startNode, llmNode, scriptNode, httpRequestNode);
+    </chain>
+    
+    <!-- LLM处理链 -->
+    <chain name="llmChain">
+        THEN(startNode, llmNode);
+    </chain>
+    
+    <!-- 脚本执行链 -->
+    <chain name="scriptChain">
+        THEN(startNode, scriptNode);
+    </chain>
+    
+    <!-- HTTP请求链 -->
+    <chain name="httpChain">
+        THEN(startNode, httpRequestNode);
+    </chain>
+</flow> 

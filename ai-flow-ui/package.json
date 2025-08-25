@@ -10,6 +10,10 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@logicflow/core": "^2.1.1",
+    "@logicflow/extension": "^2.1.2",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^1.0.2",
     "axios": "^1.11.0",
     "element-plus": "^2.10.7",
     "pinia": "^3.0.3",
@@ -17,10 +21,10 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitejs/plugin-vue": "^5.0.0",
     "@vue/tsconfig": "^0.7.0",
     "typescript": "~5.8.3",
-    "vite": "^7.1.2",
+    "vite": "^5.0.0",
     "vue-tsc": "^3.0.5"
   }
 }
