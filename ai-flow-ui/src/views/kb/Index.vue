@@ -295,51 +295,46 @@
     </el-dialog>
 
     <!-- 文件上传对话框 -->
-    <el-dialog v-model="uploadDialogVisible" title="文件上传" width="500px">
-      <el-upload
-        class="upload-demo"
-        drag
-        action="#"
-        :auto-upload="false"
-        :on-change="handleFileChange"
-        :file-list="fileList"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">
-          将文件拖到此处，或<em>点击上传</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            支持txt、pdf、doc、docx等格式文件
-          </div>
-        </template>
-      </el-upload>
+    <el-dialog v-model="uploadDialogVisible" title="文件上传" width="600px">
+      <FileUpload
+        v-model="fileList"
+        @upload-success="handleFileUploadSuccess"
+        @upload-error="handleFileUploadError"
+      />
       <template #footer>
-        <el-button @click="uploadDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleUpload" :loading="uploading">
-          上传
-        </el-button>
+        <el-button @click="uploadDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
 
     <!-- 手动录入对话框 -->
-    <el-dialog v-model="manualInputDialogVisible" title="手动录入" width="600px">
+    <el-dialog v-model="manualInputDialogVisible" title="手动录入" width="800px">
       <el-form :model="manualInputForm" label-width="100px">
         <el-form-item label="标题">
           <el-input v-model="manualInputForm.title" placeholder="请输入文档标题" />
         </el-form-item>
         <el-form-item label="内容">
-          <el-input
+          <RichTextEditor
             v-model="manualInputForm.content"
-            type="textarea"
-            :rows="8"
             placeholder="请输入文档内容"
+            height="400px"
           />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="manualInputDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleManualInput">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 文档库上传对话框 -->
+    <el-dialog v-model="docLibraryDialogVisible" title="文档库上传" width="800px">
+      <DocLibraryUpload
+        v-model="docLibraryFiles"
+        @upload-success="handleDocLibraryUploadSuccess"
+        @upload-error="handleDocLibraryUploadError"
+      />
+      <template #footer>
+        <el-button @click="docLibraryDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -374,6 +369,14 @@ import {
   type DocumentUploadRequest,
   type TestQueryRequest
 } from '../../api/kb'
+import { 
+  searchSimilar,
+  type VectorSearchRequest,
+  type VectorSearchResponse
+} from '../../api/vector'
+import RichTextEditor from '../../components/RichTextEditor.vue'
+import FileUpload from '../../components/FileUpload.vue'
+import DocLibraryUpload from '../../components/DocLibraryUpload.vue'
 
 // 搜索表单
 const searchForm = reactive({
@@ -398,6 +401,7 @@ const kbDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
 const uploadDialogVisible = ref(false)
 const manualInputDialogVisible = ref(false)
+const docLibraryDialogVisible = ref(false)
 
 // 表单相关
 const kbFormRef = ref()
@@ -441,7 +445,7 @@ const testing = ref(false)
 const chatMessagesRef = ref()
 
 // 文件上传相关
-const fileList = ref<{ raw: File; name: string; size: number }[]>([])
+const fileList = ref<File[]>([])
 const uploading = ref(false)
 
 // 手动录入相关
@@ -449,6 +453,9 @@ const manualInputForm = reactive({
   title: '',
   content: ''
 })
+
+// 文档库上传相关
+const docLibraryFiles = ref<File[]>([])
 
 // 获取知识库列表
 const getKbList = async () => {
@@ -743,7 +750,7 @@ const handleUpload = async () => {
     uploading.value = true
     
     for (const file of fileList.value) {
-      const content = await readFileContent(file.raw)
+      const content = await readFileContent(file)
       await addDocument(currentKb.value.id, {
         title: file.name,
         content: content,
@@ -762,6 +769,23 @@ const handleUpload = async () => {
   } finally {
     uploading.value = false
   }
+}
+
+// 文件上传成功处理
+const handleFileUploadSuccess = (response: any) => {
+  ElMessage.success('文件上传成功')
+  uploadDialogVisible.value = false
+  fileList.value = []
+  // 刷新文档列表
+  if (currentKb.value) {
+    getDocumentList()
+  }
+}
+
+// 文件上传失败处理
+const handleFileUploadError = (error: any) => {
+  ElMessage.error('文件上传失败')
+  console.error('文件上传失败:', error)
 }
 
 // 处理手动录入
@@ -800,13 +824,15 @@ const handleSendTest = async () => {
   try {
     testing.value = true
     
-    const request: TestQueryRequest = {
+    // 使用向量检索进行相似度搜索
+    const vectorRequest: VectorSearchRequest = {
       query: testInput.value.trim(),
+      kbId: currentKb.value.id,
       topK: testConfig.topK,
       scoreThreshold: testConfig.scoreThreshold
     }
     
-    const response = await testQuery(currentKb.value.id, request)
+    const vectorResponse = await searchSimilar(vectorRequest)
     
     // 添加用户消息
     chatMessages.value.push({
@@ -815,10 +841,22 @@ const handleSendTest = async () => {
       timestamp: new Date()
     })
     
+    // 构建AI回复，包含检索结果
+    let aiResponse = '根据向量检索结果，找到以下相关文档：\n\n'
+    
+    if (vectorResponse.results.length > 0) {
+      vectorResponse.results.forEach((result, index) => {
+        aiResponse += `${index + 1}. **${result.title}** (相似度: ${(result.score * 100).toFixed(1)}%)\n`
+        aiResponse += `   内容: ${result.content.substring(0, 100)}...\n\n`
+      })
+    } else {
+      aiResponse = '未找到相关文档，请尝试调整搜索参数或使用不同的查询词。'
+    }
+    
     // 添加AI回复
     chatMessages.value.push({
       type: 'ai',
-      content: response.answer,
+      content: aiResponse,
       timestamp: new Date()
     })
     
@@ -834,6 +872,13 @@ const handleSendTest = async () => {
   } catch (error) {
     console.error('测试失败:', error)
     ElMessage.error('测试失败')
+    
+    // 添加错误消息
+    chatMessages.value.push({
+      type: 'ai',
+      content: '抱歉，向量检索失败，请稍后重试。',
+      timestamp: new Date()
+    })
   } finally {
     testing.value = false
   }
@@ -884,6 +929,23 @@ const handleDeleteDocument = async (doc: DocumentInfo) => {
       ElMessage.error('删除失败')
     }
   }
+}
+
+// 文档库上传成功处理
+const handleDocLibraryUploadSuccess = (response: any) => {
+  ElMessage.success('文档库上传成功')
+  docLibraryDialogVisible.value = false
+  docLibraryFiles.value = []
+  // 刷新文档列表
+  if (currentKb.value) {
+    getDocumentList()
+  }
+}
+
+// 文档库上传失败处理
+const handleDocLibraryUploadError = (error: any) => {
+  ElMessage.error('文档库上传失败')
+  console.error('文档库上传失败:', error)
 }
 
 // 格式化时间
