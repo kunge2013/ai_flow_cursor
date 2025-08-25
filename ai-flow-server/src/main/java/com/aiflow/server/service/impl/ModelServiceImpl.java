@@ -1,21 +1,25 @@
 package com.aiflow.server.service.impl;
 
+import com.aiflow.server.ai.factory.AiModelAdapterFactory;
+import com.aiflow.server.ai.adapter.AiModelAdapter;
 import com.aiflow.server.dto.ModelDTO;
 import com.aiflow.server.dto.ModelQueryDTO;
 import com.aiflow.server.dto.ModelTestDTO;
 import com.aiflow.server.entity.Model;
 import com.aiflow.server.mapper.ModelMapper;
 import com.aiflow.server.service.ModelService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 模型服务实现类
@@ -24,33 +28,44 @@ import java.time.LocalDateTime;
 @Service
 public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements ModelService {
 
+    @Autowired
+    private AiModelAdapterFactory aiModelAdapterFactory;
+
     @Override
     public IPage<Model> getModelPage(ModelQueryDTO queryDTO) {
         Page<Model> page = new Page<>(queryDTO.getCurrentPage(), queryDTO.getPageSize());
         
-        // 构建查询条件
-        LambdaQueryWrapper<Model> queryWrapper = new LambdaQueryWrapper<>();
+        QueryWrapper<Model> queryWrapper = new QueryWrapper<>();
         
         if (StringUtils.hasText(queryDTO.getModelName())) {
-            queryWrapper.like(Model::getModelName, queryDTO.getModelName());
-        }
-        if (StringUtils.hasText(queryDTO.getModelType())) {
-            queryWrapper.eq(Model::getModelType, queryDTO.getModelType());
-        }
-        if (StringUtils.hasText(queryDTO.getBaseModel())) {
-            queryWrapper.eq(Model::getBaseModel, queryDTO.getBaseModel());
-        }
-        if (StringUtils.hasText(queryDTO.getStatus())) {
-            queryWrapper.eq(Model::getStatus, queryDTO.getStatus());
+            queryWrapper.like("model_name", queryDTO.getModelName());
         }
         
-        queryWrapper.orderByDesc(Model::getCreatedAt);
+        if (StringUtils.hasText(queryDTO.getModelType())) {
+            queryWrapper.eq("model_type", queryDTO.getModelType());
+        }
+        
+        if (StringUtils.hasText(queryDTO.getBaseModel())) {
+            queryWrapper.eq("base_model", queryDTO.getBaseModel());
+        }
+        
+        if (StringUtils.hasText(queryDTO.getStatus())) {
+            queryWrapper.eq("status", queryDTO.getStatus());
+        }
+        
+        queryWrapper.orderByDesc("created_at");
         
         return this.page(page, queryWrapper);
     }
 
     @Override
     public boolean createModel(ModelDTO modelDTO) {
+        // 验证AI模型配置
+        if (!validateAiModelConfig(modelDTO)) {
+            log.error("AI模型配置验证失败: {}", modelDTO);
+            return false;
+        }
+        
         Model model = new Model();
         BeanUtils.copyProperties(modelDTO, model);
         model.setCreatedAt(LocalDateTime.now());
@@ -61,13 +76,16 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
 
     @Override
     public boolean updateModel(ModelDTO modelDTO) {
-        if (modelDTO.getId() == null) {
-            throw new IllegalArgumentException("模型ID不能为空");
+        // 验证AI模型配置
+        if (!validateAiModelConfig(modelDTO)) {
+            log.error("AI模型配置验证失败: {}", modelDTO);
+            return false;
         }
         
         Model model = this.getById(modelDTO.getId());
         if (model == null) {
-            throw new IllegalArgumentException("模型不存在");
+            log.error("模型不存在，ID: {}", modelDTO.getId());
+            return false;
         }
         
         BeanUtils.copyProperties(modelDTO, model);
@@ -84,20 +102,15 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
     @Override
     public String testModel(ModelTestDTO testDTO) {
         try {
-            log.info("开始测试模型接口: {}", testDTO.getApiEndpoint());
+            // 根据模型类型获取对应的适配器
+            String modelType = determineModelType(testDTO.getApiEndpoint());
+            AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
             
-            // 这里可以添加实际的API测试逻辑
-            // 例如：发送HTTP请求到模型API进行测试
-            
-            // 模拟测试过程
-            Thread.sleep(1000);
-            
-            log.info("模型接口测试成功");
-            return "模型接口测试成功！响应时间: 1000ms";
-            
+            log.info("使用适配器 {} 测试模型连接", adapter.getModelType());
+            return adapter.testConnection(testDTO);
         } catch (Exception e) {
-            log.error("模型接口测试失败", e);
-            throw new RuntimeException("模型接口测试失败: " + e.getMessage());
+            log.error("测试模型失败", e);
+            return "测试失败: " + e.getMessage();
         }
     }
 
@@ -111,5 +124,69 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         ModelDTO modelDTO = new ModelDTO();
         BeanUtils.copyProperties(model, modelDTO);
         return modelDTO;
+    }
+
+    @Override
+    public List<String> getAvailableAiModelTypes() {
+        return aiModelAdapterFactory.getAvailableModelTypes();
+    }
+
+    @Override
+    public String generateTextWithAiModel(Long modelId, String prompt, Integer maxTokens, Double temperature) {
+        ModelDTO modelDTO = getModelById(modelId);
+        if (modelDTO == null) {
+            throw new RuntimeException("模型不存在，ID: " + modelId);
+        }
+        
+        // 根据模型类型获取对应的适配器
+        String modelType = determineModelType(modelDTO.getApiEndpoint());
+        AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
+        
+        log.info("使用适配器 {} 生成文本", adapter.getModelType());
+        return adapter.generateText(modelDTO, prompt, maxTokens, temperature);
+    }
+
+    @Override
+    public boolean validateAiModelConfig(ModelDTO modelDTO) {
+        try {
+            // 根据模型类型获取对应的适配器
+            String modelType = determineModelType(modelDTO.getApiEndpoint());
+            AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
+            
+            return adapter.isValidConfig(modelDTO);
+        } catch (Exception e) {
+            log.error("验证AI模型配置失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 根据API地址确定模型类型
+     *
+     * @param apiEndpoint API地址
+     * @return 模型类型
+     */
+    private String determineModelType(String apiEndpoint) {
+        if (apiEndpoint == null) {
+            return "openai"; // 默认类型
+        }
+        
+        String endpoint = apiEndpoint.toLowerCase();
+        
+        if (endpoint.contains("zhipu") || endpoint.contains("bigmodel.cn")) {
+            return "zhipu";
+        } else if (endpoint.contains("deepseek")) {
+            return "deepseek";
+        } else if (endpoint.contains("openai") || endpoint.contains("api.openai.com")) {
+            return "openai";
+        } else if (endpoint.contains("anthropic") || endpoint.contains("claude")) {
+            return "claude";
+        } else if (endpoint.contains("gemini") || endpoint.contains("google")) {
+            return "gemini";
+        } else if (endpoint.contains("qianfan") || endpoint.contains("dashscope")) {
+            return "qianfan";
+        } else {
+            return "openai"; // 默认类型
+        }
     }
 } 
