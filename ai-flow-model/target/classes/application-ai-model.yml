@@ -1,0 +1,83 @@
+# AI模型配置示例
+ai:
+  model:
+    # 默认模型配置
+    default-model:
+      type: openai
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # OpenAI配置
+    openai:
+      api-key: ${OPENAI_API_KEY:your-openai-api-key}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      model: ${OPENAI_MODEL:gpt-3.5-turbo}
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # Anthropic配置
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:your-anthropic-api-key}
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+      model: ${ANTHROPIC_MODEL:claude-3-sonnet-20240229}
+      max-tokens: 4096
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # Google Gemini配置
+    google-gemini:
+      api-key: ${GOOGLE_GEMINI_API_KEY:your-google-gemini-api-key}
+      base-url: ${GOOGLE_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      model: ${GOOGLE_GEMINI_MODEL:gemini-pro}
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # Ollama配置
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${OLLAMA_MODEL:llama2}
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # 智普AI配置
+    zhipu-ai:
+      api-key: ${ZHIPU_AI_API_KEY:your-zhipu-ai-api-key}
+      base-url: ${ZHIPU_AI_BASE_URL:https://open.bigmodel.cn}
+      model: ${ZHIPU_AI_MODEL:glm-4}
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # 通义千问配置
+    qianfan:
+      api-key: ${QIANFAN_API_KEY:your-qianfan-api-key}
+      secret-key: ${QIANFAN_SECRET_KEY:your-qianfan-secret-key}
+      base-url: ${QIANFAN_BASE_URL:https://aip.baidubce.com}
+      model: ${QIANFAN_MODEL:qwen-turbo}
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+
+# 日志配置
+logging:
+  level:
+    com.aiflow.aimodel: INFO
+    dev.langchain4j: WARN 

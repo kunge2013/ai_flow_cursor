@@ -5,6 +5,13 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>ai-flow-server</name>
   <description>AI Flow Server</description>
+  
+  <parent>
+    <groupId>com.aiflow</groupId>
+    <artifactId>ai-flow-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../</relativePath>
+  </parent>
   <properties>
     <java.version>17</java.version>
     <spring-boot.version>3.1.5</spring-boot.version>
@@ -115,17 +122,11 @@
       <optional>true</optional>
     </dependency>
     
-    <!-- LangChain4j -->
+    <!-- AI Flow Model Module -->
     <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j</artifactId>
-      <version>0.27.1</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-open-ai</artifactId>
-      <version>0.27.1</version>
+      <groupId>com.aiflow</groupId>
+      <artifactId>ai-flow-model</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
     </dependency>
     
     <!-- 暂时注释掉有问题的依赖

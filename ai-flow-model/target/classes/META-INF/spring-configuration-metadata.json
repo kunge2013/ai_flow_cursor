@@ -1,0 +1,365 @@
+{
+  "groups": [
+    {
+      "name": "ai.model",
+      "type": "com.aiflow.aimodel.config.AiModelProperties",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.anthropic",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.default-model",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.google-gemini",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.ollama",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.openai",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.qianfan",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    },
+    {
+      "name": "ai.model.zhipu-ai",
+      "type": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "ai.model.anthropic.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic"
+    },
+    {
+      "name": "ai.model.anthropic.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": "https:\/\/api.anthropic.com"
+    },
+    {
+      "name": "ai.model.anthropic.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.anthropic.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": 4096
+    },
+    {
+      "name": "ai.model.anthropic.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": "claude-3-sonnet-20240229"
+    },
+    {
+      "name": "ai.model.anthropic.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.anthropic.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.anthropic.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Anthropic",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.default-model.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.default-model.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.default-model.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.default-model.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.default-model.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.default-model.type",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$DefaultModel",
+      "defaultValue": "openai"
+    },
+    {
+      "name": "ai.model.google-gemini.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini"
+    },
+    {
+      "name": "ai.model.google-gemini.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": "https:\/\/generativelanguage.googleapis.com"
+    },
+    {
+      "name": "ai.model.google-gemini.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.google-gemini.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.google-gemini.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": "gemini-pro"
+    },
+    {
+      "name": "ai.model.google-gemini.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.google-gemini.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.google-gemini.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$GoogleGemini",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.ollama.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": "http:\/\/localhost:11434"
+    },
+    {
+      "name": "ai.model.ollama.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.ollama.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.ollama.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": "llama2"
+    },
+    {
+      "name": "ai.model.ollama.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.ollama.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.ollama.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Ollama",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.openai.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi"
+    },
+    {
+      "name": "ai.model.openai.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": "https:\/\/api.openai.com"
+    },
+    {
+      "name": "ai.model.openai.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.openai.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.openai.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": "gpt-3.5-turbo"
+    },
+    {
+      "name": "ai.model.openai.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.openai.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.openai.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$OpenAi",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.qianfan.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan"
+    },
+    {
+      "name": "ai.model.qianfan.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": "https:\/\/aip.baidubce.com"
+    },
+    {
+      "name": "ai.model.qianfan.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.qianfan.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.qianfan.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": "qwen-turbo"
+    },
+    {
+      "name": "ai.model.qianfan.secret-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan"
+    },
+    {
+      "name": "ai.model.qianfan.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.qianfan.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.qianfan.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$Qianfan",
+      "defaultValue": 1
+    },
+    {
+      "name": "ai.model.zhipu-ai.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi"
+    },
+    {
+      "name": "ai.model.zhipu-ai.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": "https:\/\/open.bigmodel.cn"
+    },
+    {
+      "name": "ai.model.zhipu-ai.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": 3
+    },
+    {
+      "name": "ai.model.zhipu-ai.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": 2048
+    },
+    {
+      "name": "ai.model.zhipu-ai.model",
+      "type": "java.lang.String",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": "glm-4"
+    },
+    {
+      "name": "ai.model.zhipu-ai.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": 0.7
+    },
+    {
+      "name": "ai.model.zhipu-ai.timeout",
+      "type": "java.lang.Long",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": 60000
+    },
+    {
+      "name": "ai.model.zhipu-ai.top-p",
+      "type": "java.lang.Double",
+      "sourceType": "com.aiflow.aimodel.config.AiModelProperties$ZhipuAi",
+      "defaultValue": 1
+    }
+  ],
+  "hints": []
+}

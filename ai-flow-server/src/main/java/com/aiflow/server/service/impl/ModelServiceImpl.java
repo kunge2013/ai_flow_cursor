@@ -1,7 +1,9 @@
 package com.aiflow.server.service.impl;
 
-import com.aiflow.server.ai.factory.AiModelAdapterFactory;
-import com.aiflow.server.ai.adapter.AiModelAdapter;
+import com.aiflow.aimodel.factory.AiModelFactory;
+import com.aiflow.aimodel.adapter.AiModelAdapter;
+import com.aiflow.aimodel.model.AiModelConfig;
+import com.aiflow.aimodel.model.AiModelType;
 import com.aiflow.server.dto.ModelDTO;
 import com.aiflow.server.dto.ModelQueryDTO;
 import com.aiflow.server.dto.ModelTestDTO;
@@ -20,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 模型服务实现类
@@ -29,7 +32,7 @@ import java.util.List;
 public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements ModelService {
 
     @Autowired
-    private AiModelAdapterFactory aiModelAdapterFactory;
+    private AiModelFactory aiModelFactory;
 
     @Override
     public IPage<Model> getModelPage(ModelQueryDTO queryDTO) {
@@ -104,10 +107,19 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         try {
             // 根据模型类型获取对应的适配器
             String modelType = determineModelType(testDTO.getApiEndpoint());
-            AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
+            AiModelType aiModelType = AiModelType.fromCode(modelType);
+            AiModelAdapter adapter = aiModelFactory.getAdapter(aiModelType);
             
-            log.info("使用适配器 {} 测试模型连接", adapter.getModelType());
-            return adapter.testConnection(testDTO);
+            // 创建 AiModelConfig 对象
+            AiModelConfig config = AiModelConfig.builder()
+                    .type(aiModelType)
+                    .apiEndpoint(testDTO.getApiEndpoint())
+                    .apiKey(testDTO.getApiKey())
+                    .baseModel("test-model") // 使用默认值
+                    .build();
+            
+            log.info("使用适配器 {} 测试模型连接", adapter.getSupportedType());
+            return adapter.testConnection(config).get();
         } catch (Exception e) {
             log.error("测试模型失败", e);
             return "测试失败: " + e.getMessage();
@@ -128,7 +140,9 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
 
     @Override
     public List<String> getAvailableAiModelTypes() {
-        return aiModelAdapterFactory.getAvailableModelTypes();
+        return aiModelFactory.getAvailableModelTypes().stream()
+                .map(AiModelType::getCode)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -140,10 +154,21 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         
         // 根据模型类型获取对应的适配器
         String modelType = determineModelType(modelDTO.getApiEndpoint());
-        AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
+        AiModelType aiModelType = AiModelType.fromCode(modelType);
+        AiModelAdapter adapter = aiModelFactory.getAdapter(aiModelType);
         
-        log.info("使用适配器 {} 生成文本", adapter.getModelType());
-        return adapter.generateText(modelDTO, prompt, maxTokens, temperature);
+        // 创建 AiModelConfig 对象
+        AiModelConfig config = AiModelConfig.builder()
+                .type(aiModelType)
+                .apiEndpoint(modelDTO.getApiEndpoint())
+                .apiKey(modelDTO.getApiKey())
+                .baseModel(modelDTO.getBaseModel())
+                .maxTokens(maxTokens)
+                .temperature(temperature)
+                .build();
+        
+        log.info("使用适配器 {} 生成文本", adapter.getSupportedType());
+        return adapter.generateText(config, prompt);
     }
 
     @Override
@@ -151,9 +176,18 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         try {
             // 根据模型类型获取对应的适配器
             String modelType = determineModelType(modelDTO.getApiEndpoint());
-            AiModelAdapter adapter = aiModelAdapterFactory.getAdapter(modelType);
+            AiModelType aiModelType = AiModelType.fromCode(modelType);
+            AiModelAdapter adapter = aiModelFactory.getAdapter(aiModelType);
             
-            return adapter.isValidConfig(modelDTO);
+            // 创建 AiModelConfig 对象
+            AiModelConfig config = AiModelConfig.builder()
+                    .type(aiModelType)
+                    .apiEndpoint(modelDTO.getApiEndpoint())
+                    .apiKey(modelDTO.getApiKey())
+                    .baseModel(modelDTO.getBaseModel())
+                    .build();
+            
+            return adapter.isValidConfig(config);
         } catch (Exception e) {
             log.error("验证AI模型配置失败", e);
             return false;

@@ -1,0 +1,10 @@
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/adapter/impl/AnthropicAdapter.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/adapter/impl/OllamaAdapter.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/adapter/impl/OpenAiAdapter.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/model/AiModelConfig.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/factory/AiModelFactory.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/model/AiModelType.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/service/AiModelService.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/adapter/AiModelAdapter.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/config/AiModelProperties.java
+/home/fk/workspace/github/ai_flow_cursor/ai-flow-model/src/main/java/com/aiflow/aimodel/config/AiModelAutoConfiguration.java
