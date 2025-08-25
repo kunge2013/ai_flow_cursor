@@ -1,0 +1,83 @@
+# 向量存储配置示例
+ai:
+  vectorstore:
+    # 默认向量存储类型
+    default-type: milvus
+    
+    # Milvus配置
+    milvus:
+      host: localhost
+      port: 19530
+      collection-name: ai_flow_documents
+      dimension: 1536
+      username: 
+      password: 
+      database: default
+    
+    # Chroma配置
+    chroma:
+      host: localhost
+      port: 8000
+      collection-name: ai_flow_documents
+      username: 
+      password: 
+    
+    # Pinecone配置
+    pinecone:
+      api-key: 
+      environment: 
+      project-name: 
+      index-name: ai-flow-documents
+      namespace: default
+    
+    # Weaviate配置
+    weaviate:
+      host: localhost
+      port: 8080
+      scheme: http
+      api-key: 
+      class-name: Document
+
+  model:
+    # OpenAI配置
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: https://api.openai.com
+      model: gpt-3.5-turbo
+      embedding-model: text-embedding-ada-002
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # 智普AI配置
+    zhipu-ai:
+      api-key: ${ZHIPU_AI_API_KEY:}
+      base-url: https://open.bigmodel.cn
+      model: glm-4
+      embedding-model: text-embedding-v2
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+    
+    # 千帆配置
+    qianfan:
+      api-key: ${QIANFAN_API_KEY:}
+      secret-key: ${QIANFAN_SECRET_KEY:}
+      base-url: https://aip.baidubce.com
+      model: qwen-turbo
+      embedding-model: text-embedding-v1
+      max-tokens: 2048
+      temperature: 0.7
+      top-p: 1.0
+      max-retries: 3
+      timeout: 60000
+
+# 日志配置
+logging:
+  level:
+    com.aiflow.aimodel: DEBUG
+    dev.langchain4j: INFO 

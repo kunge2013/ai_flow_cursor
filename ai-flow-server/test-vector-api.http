@@ -1,0 +1,79 @@
+### 测试向量化API
+
+### 1. 测试文档向量化
+POST http://localhost:8080/api/vector/embed
+Content-Type: application/json
+
+{
+  "content": "人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。",
+  "vectorModel": "zhipu"
+}
+
+### 2. 测试批量向量化
+POST http://localhost:8080/api/vector/batch-embed
+Content-Type: application/json
+
+{
+  "contents": [
+    "机器学习是人工智能的一个重要分支，它使计算机能够在没有明确编程的情况下学习和改进。",
+    "深度学习是机器学习的一个子集，它使用多层神经网络来模拟人脑的工作方式。",
+    "自然语言处理是人工智能的一个应用领域，它致力于让计算机理解和生成人类语言。"
+  ],
+  "vectorModel": "zhipu"
+}
+
+### 3. 测试向量搜索
+POST http://localhost:8080/api/vector/search
+Content-Type: application/json
+
+{
+  "query": "什么是机器学习？",
+  "kbId": "kb_001",
+  "topK": 5,
+  "scoreThreshold": 0.7
+}
+
+### 4. 测试知识库创建
+POST http://localhost:8080/api/kb
+Content-Type: application/json
+
+{
+  "name": "AI技术文档库",
+  "description": "包含人工智能相关的技术文档和教程",
+  "vectorModel": "zhipu",
+  "status": true,
+  "tags": ["AI", "技术", "教程"]
+}
+
+### 5. 测试文档上传
+POST http://localhost:8080/api/kb/kb_001/documents
+Content-Type: application/json
+
+{
+  "title": "机器学习基础",
+  "content": "机器学习是人工智能的一个重要分支，它使计算机能够在没有明确编程的情况下学习和改进。本文档介绍了机器学习的基本概念、算法和应用。",
+  "type": "text",
+  "size": 1024
+}
+
+### 6. 测试知识库命中测试
+POST http://localhost:8080/api/kb/kb_001/test
+Content-Type: application/json
+
+{
+  "query": "机器学习的基本概念是什么？",
+  "topK": 3,
+  "scoreThreshold": 0.6
+}
+
+### 环境变量设置
+# 在启动应用前，请设置以下环境变量：
+# export ZHIPU_AI_API_KEY="your-actual-zhipu-api-key"
+# export OPENAI_API_KEY="your-actual-openai-api-key"
+# export QIANFAN_API_KEY="your-actual-qianfan-api-key"
+
+### 测试说明
+# 1. 确保应用已启动并运行在 localhost:8080
+# 2. 使用 VS Code 的 REST Client 插件或 Postman 等工具测试
+# 3. 先创建知识库，再上传文档，最后测试搜索功能
+# 4. 观察日志输出，了解向量化过程 

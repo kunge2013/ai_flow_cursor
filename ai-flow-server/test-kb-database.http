@@ -1,0 +1,91 @@
+### 测试知识库数据库持久化功能
+
+### 1. 创建知识库
+POST http://localhost:8081/api/kb
+Content-Type: application/json
+
+{
+  "name": "AI技术文档库",
+  "description": "包含人工智能相关的技术文档和教程",
+  "tags": ["AI", "技术", "教程"],
+  "vectorModel": "openai",
+  "status": true
+}
+
+### 2. 创建第二个知识库
+POST http://localhost:8081/api/kb
+Content-Type: application/json
+
+{
+  "name": "产品手册库",
+  "description": "产品使用说明和操作手册",
+  "tags": ["产品", "手册", "说明"],
+  "vectorModel": "zhipu",
+  "status": true
+}
+
+### 3. 查询知识库列表
+GET http://localhost:8081/api/kb?page=1&size=10
+
+### 4. 按名称搜索
+GET http://localhost:8081/api/kb?name=AI&page=1&size=10
+
+### 5. 获取知识库详情
+GET http://localhost:8081/api/kb/{{kbId}}
+
+### 6. 更新知识库
+PUT http://localhost:8081/api/kb/{{kbId}}
+Content-Type: application/json
+
+{
+  "name": "AI技术文档库-更新版",
+  "description": "更新后的AI技术文档库描述",
+  "tags": ["AI", "技术", "教程", "更新"],
+  "vectorModel": "openai",
+  "status": true
+}
+
+### 7. 添加文档到知识库
+POST http://localhost:8081/api/kb/{{kbId}}/documents
+Content-Type: application/json
+
+{
+  "title": "机器学习基础",
+  "content": "机器学习是人工智能的一个重要分支，它使计算机能够在没有明确编程的情况下学习和改进。本文档介绍了机器学习的基本概念、算法和应用。",
+  "type": "text",
+  "size": 1024
+}
+
+### 8. 添加第二个文档
+POST http://localhost:8081/api/kb/{{kbId}}/documents
+Content-Type: application/json
+
+{
+  "title": "深度学习入门",
+  "content": "深度学习是机器学习的一个子集，它使用多层神经网络来模拟人脑的学习过程。深度学习在图像识别、自然语言处理等领域取得了突破性进展。",
+  "type": "text",
+  "size": 2048
+}
+
+### 9. 获取文档列表
+GET http://localhost:8081/api/kb/{{kbId}}/documents
+
+### 10. 命中测试
+POST http://localhost:8081/api/kb/{{kbId}}/test
+Content-Type: application/json
+
+{
+  "query": "什么是机器学习？",
+  "topK": 3,
+  "scoreThreshold": 0.5
+}
+
+### 11. 删除文档
+DELETE http://localhost:8081/api/kb/{{kbId}}/documents/{{documentId}}
+
+### 12. 删除知识库
+DELETE http://localhost:8081/api/kb/{{kbId}}
+
+### 13. 验证数据持久化 - 重启应用后再次查询
+# 重启应用后执行以下查询，验证数据是否持久化
+GET http://localhost:8081/api/kb?page=1&size=10 

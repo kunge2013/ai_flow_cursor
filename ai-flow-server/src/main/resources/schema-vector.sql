@@ -1,8 +1,9 @@
 -- 向量存储相关表结构
 
+drop TABLE t_knowledge_base;
 -- 知识库表
 CREATE TABLE IF NOT EXISTS t_knowledge_base (
-    id VARCHAR(32) PRIMARY KEY,
+    id VARCHAR(128) PRIMARY KEY,
     name VARCHAR(100) NOT NULL COMMENT '知识库名称',
     description TEXT COMMENT '知识库描述',
     vector_model VARCHAR(50) NOT NULL DEFAULT 'openai' COMMENT '向量模型',
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS t_knowledge_base (
 
 -- 向量文档表
 CREATE TABLE IF NOT EXISTS t_vector_document (
-    id VARCHAR(32) PRIMARY KEY,
+    id VARCHAR(128) PRIMARY KEY,
     kb_id VARCHAR(32) NOT NULL COMMENT '知识库ID',
     title VARCHAR(200) NOT NULL COMMENT '文档标题',
     content LONGTEXT NOT NULL COMMENT '文档内容',
@@ -37,7 +38,7 @@ CREATE TABLE IF NOT EXISTS t_vector_document (
 
 -- 向量索引表（用于快速检索）
 CREATE TABLE IF NOT EXISTS t_vector_index (
-    id VARCHAR(32) PRIMARY KEY,
+    id VARCHAR(128) PRIMARY KEY,
     document_id VARCHAR(32) NOT NULL COMMENT '文档ID',
     kb_id VARCHAR(32) NOT NULL COMMENT '知识库ID',
     vector_model VARCHAR(50) NOT NULL COMMENT '向量模型',
@@ -50,8 +51,8 @@ CREATE TABLE IF NOT EXISTS t_vector_index (
 
 -- 向量检索日志表
 CREATE TABLE IF NOT EXISTS t_vector_search_log (
-    id VARCHAR(32) PRIMARY KEY,
-    kb_id VARCHAR(32) NOT NULL COMMENT '知识库ID',
+    id VARCHAR(128) PRIMARY KEY,
+    kb_id VARCHAR(128) NOT NULL COMMENT '知识库ID',
     query TEXT NOT NULL COMMENT '查询内容',
     query_embedding LONGTEXT COMMENT '查询向量',
     top_k INT NOT NULL DEFAULT 5 COMMENT '返回结果数量',

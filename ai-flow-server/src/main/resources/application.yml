@@ -38,3 +38,44 @@ mybatis-plus:
 # LiteFlow Configuration  
 liteflow:
   rule-source: classpath:flow/basic-flow.xml 
+
+# 向量模型配置
+ai:
+  model:
+    # 智普AI配置
+    zhipu-ai:
+      api-key: ${ZHIPU_AI_API_KEY:your-zhipu-ai-api-key}
+      embedding-model: text-embedding-v2
+      base-url: https://open.bigmodel.cn
+    
+    # OpenAI配置
+    openai:
+      api-key: ${OPENAI_API_KEY:your-openai-api-key}
+      embedding-model: text-embedding-ada-002
+      base-url: https://api.openai.com
+    
+    # 千帆配置
+    qianfan:
+      api-key: ${QIANFAN_API_KEY:your-qianfan-api-key}
+      embedding-model: text-embedding-v1
+      base-url: https://aip.baidubce.com
+
+# 向量数据库配置
+vector:
+  # 默认向量模型
+  default-model: zhipu
+  
+  # 向量存储配置
+  storage:
+    type: memory  # memory, milvus, pinecone, weaviate
+    milvus:
+      host: localhost
+      port: 19530
+      collection: ai_flow_vectors
+    pinecone:
+      api-key: ${PINECONE_API_KEY:}
+      environment: us-west1-gcp
+      index: ai-flow-vectors
+    weaviate:
+      url: http://localhost:8080
+      class-name: AIDocument 

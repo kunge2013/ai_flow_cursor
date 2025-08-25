@@ -85,6 +85,49 @@
             <version>${langchain4j.version}</version>
         </dependency>
         
+        <!-- LangChain4j 智普AI - 暂时注释掉，因为依赖不可用
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-zhipu-ai</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        -->
+        
+        <!-- LangChain4j 千帆 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-qianfan</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
+        <!-- LangChain4j Milvus -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-milvus</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
+        <!-- LangChain4j Chroma -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-chroma</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
+        <!-- LangChain4j Pinecone -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-pinecone</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
+        <!-- LangChain4j Weaviate -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-weaviate</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
         <!-- 暂时注释掉可能有问题的依赖
         <dependency>
             <groupId>dev.langchain4j</groupId>

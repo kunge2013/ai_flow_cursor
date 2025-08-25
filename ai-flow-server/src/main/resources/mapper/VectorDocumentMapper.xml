@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiflow.server.mapper.VectorDocumentMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.aiflow.server.entity.VectorDocument">
+        <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="kb_id" property="kbId" jdbcType="VARCHAR"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="content_type" property="contentType" jdbcType="VARCHAR"/>
+        <result column="file_size" property="fileSize" jdbcType="BIGINT"/>
+        <result column="file_path" property="filePath" jdbcType="VARCHAR"/>
+        <result column="vector_model" property="vectorModel" jdbcType="VARCHAR"/>
+        <result column="embedding" property="embedding" jdbcType="VARCHAR"/>
+        <result column="metadata" property="metadata" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="deleted" property="deleted" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 根据知识库ID查询文档列表 -->
+    <select id="selectByKbId" resultMap="BaseResultMap">
+        SELECT *
+        FROM t_vector_document
+        WHERE kb_id = #{kbId}
+        AND deleted = 0
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据知识库ID删除所有文档（逻辑删除） -->
+    <update id="deleteByKbId">
+        UPDATE t_vector_document
+        SET deleted = 1, updated_at = NOW()
+        WHERE kb_id = #{kbId}
+        AND deleted = 0
+    </update>
+
+</mapper> 
