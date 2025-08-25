@@ -1,5 +1,6 @@
 com/aiflow/aimodel/model/AiModelConfig$1.class
 META-INF/spring-configuration-metadata.json
+com/aiflow/aimodel/EnableAimodel.class
 com/aiflow/aimodel/config/AiModelProperties$Anthropic.class
 com/aiflow/aimodel/config/AiModelProperties$OpenAi.class
 com/aiflow/aimodel/config/AiModelProperties$DefaultModel.class

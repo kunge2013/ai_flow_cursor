@@ -129,49 +129,32 @@
       <version>0.0.1-SNAPSHOT</version>
     </dependency>
     
-    <!-- 暂时注释掉有问题的依赖
+    <!-- LangChain4j Dependencies -->
     <dependency>
       <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-ollama</artifactId>
+      <artifactId>langchain4j</artifactId>
       <version>0.27.1</version>
     </dependency>
     
     <dependency>
       <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-azure-open-ai</artifactId>
+      <artifactId>langchain4j-open-ai</artifactId>
       <version>0.27.1</version>
     </dependency>
     
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-google-gemini</artifactId>
-      <version>0.27.1</version>
-    </dependency>
-    
+    <!-- 暂时注释掉可能有问题的依赖
     <dependency>
       <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j-anthropic</artifactId>
       <version>0.27.1</version>
     </dependency>
-    
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-qianfan</artifactId>
-      <version>0.27.1</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-zhipu-ai</artifactId>
-      <version>0.27.1</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>dev.langchain4j</groupId>
-      <artifactId>langchain4j-deepseek</artifactId>
-      <version>0.27.1</version>
-    </dependency>
     -->
+    
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-ollama</artifactId>
+      <version>0.27.1</version>
+    </dependency>
     
     <dependency>
       <groupId>org.springframework.boot</groupId>
