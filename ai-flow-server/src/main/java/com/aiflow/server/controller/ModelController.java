@@ -118,4 +118,46 @@ public class ModelController {
         String[] baseModels = {"gpt-4", "gpt-3.5", "claude", "gemini", "wenxin", "qwen"};
         return ResponseEntity.ok(baseModels);
     }
+
+    /**
+     * 获取可用的AI模型类型
+     */
+    @GetMapping("/ai-types")
+    @Operation(summary = "获取AI模型类型", description = "获取所有可用的AI模型类型")
+    public ResponseEntity<java.util.List<String>> getAvailableAiModelTypes() {
+        log.info("获取可用的AI模型类型");
+        java.util.List<String> types = modelService.getAvailableAiModelTypes();
+        return ResponseEntity.ok(types);
+    }
+
+    /**
+     * 使用AI模型生成文本
+     */
+    @PostMapping("/{id}/generate")
+    @Operation(summary = "AI文本生成", description = "使用指定的AI模型生成文本")
+    public ResponseEntity<String> generateText(
+            @PathVariable Long id,
+            @RequestParam String prompt,
+            @RequestParam(required = false) Integer maxTokens,
+            @RequestParam(required = false) Double temperature) {
+        log.info("使用AI模型生成文本，模型ID: {}, 提示词: {}", id, prompt);
+        try {
+            String result = modelService.generateTextWithAiModel(id, prompt, maxTokens, temperature);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("AI文本生成失败", e);
+            return ResponseEntity.badRequest().body("生成失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 验证AI模型配置
+     */
+    @PostMapping("/validate")
+    @Operation(summary = "验证AI模型配置", description = "验证AI模型配置是否有效")
+    public ResponseEntity<Boolean> validateAiModelConfig(@Valid @RequestBody ModelDTO modelDTO) {
+        log.info("验证AI模型配置: {}", modelDTO);
+        boolean isValid = modelService.validateAiModelConfig(modelDTO);
+        return ResponseEntity.ok(isValid);
+    }
 } 

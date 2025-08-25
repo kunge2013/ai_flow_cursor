@@ -7,6 +7,8 @@ import com.aiflow.server.entity.Model;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 /**
  * 模型服务接口
  */
@@ -59,4 +61,30 @@ public interface ModelService extends IService<Model> {
      * @return 模型信息
      */
     ModelDTO getModelById(Long id);
+
+    /**
+     * 获取所有可用的AI模型类型
+     *
+     * @return 模型类型列表
+     */
+    List<String> getAvailableAiModelTypes();
+
+    /**
+     * 使用AI模型生成文本
+     *
+     * @param modelId 模型ID
+     * @param prompt 提示词
+     * @param maxTokens 最大token数
+     * @param temperature 温度参数
+     * @return 生成的文本
+     */
+    String generateTextWithAiModel(Long modelId, String prompt, Integer maxTokens, Double temperature);
+
+    /**
+     * 验证AI模型配置
+     *
+     * @param modelDTO 模型配置
+     * @return 验证结果
+     */
+    boolean validateAiModelConfig(ModelDTO modelDTO);
 } 
