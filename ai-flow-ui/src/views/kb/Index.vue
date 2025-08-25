@@ -51,12 +51,25 @@
           class="kb-card"
           @click="handleKbClick(kb)"
           @mouseenter="showActions(kb.id)"
-          @mouseleave="hideActions()"
+          @mouseleave="handleCardMouseLeave"
         >
           <div class="kb-card-header">
             <h3 class="kb-name">{{ kb.name }}</h3>
-            <div class="kb-actions" v-show="hoveredKbId === kb.id">
-              <el-dropdown @command="handleAction" trigger="click">
+            <div 
+              class="kb-actions" 
+              v-show="hoveredKbId === kb.id" 
+              @click.stop
+              @mouseenter="handleActionsMouseEnter"
+              @mouseleave="handleActionsMouseLeave"
+            >
+              <el-dropdown 
+                @command="handleAction" 
+                trigger="click"
+                placement="bottom-end"
+                :teleported="false"
+                @visible-change="handleDropdownVisibleChange"
+                popper-class="kb-actions-dropdown"
+              >
                 <el-button type="text" class="action-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -191,7 +204,28 @@
                   </el-button>
                 </div>
                 <div class="document-list">
-                  <el-empty description="暂无文档" />
+                  <el-table v-if="documentList.length > 0" :data="documentList" style="width: 100%">
+                    <el-table-column prop="title" label="标题" min-width="200" />
+                    <el-table-column prop="type" label="类型" width="100" />
+                    <el-table-column prop="size" label="大小" width="100">
+                      <template #default="{ row }">
+                        {{ formatFileSize(row.size || 0) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column prop="createdAt" label="创建时间" width="180">
+                      <template #default="{ row }">
+                        {{ formatTime(row.createdAt) }}
+                      </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120">
+                      <template #default="{ row }">
+                        <el-button type="danger" size="small" @click="handleDeleteDocument(row)">
+                          删除
+                        </el-button>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                  <el-empty v-else description="暂无文档" />
                 </div>
               </div>
             </el-tab-pane>
@@ -325,7 +359,21 @@ import {
   Folder,
   UploadFilled
 } from '@element-plus/icons-vue'
-import { mockKbList, type MockKnowledgeBase } from './mockData'
+import { 
+  listKb, 
+  createKb, 
+  updateKb, 
+  deleteKb, 
+  getDocuments, 
+  addDocument, 
+  deleteDocument, 
+  testQuery,
+  type KnowledgeBaseSummary,
+  type KnowledgeBaseUpsertRequest,
+  type DocumentInfo,
+  type DocumentUploadRequest,
+  type TestQueryRequest
+} from '../../api/kb'
 
 // 搜索表单
 const searchForm = reactive({
@@ -340,9 +388,10 @@ const pagination = reactive({
 })
 
 // 知识库列表
-const kbList = ref<MockKnowledgeBase[]>([])
+const kbList = ref<KnowledgeBaseSummary[]>([])
 const loading = ref(false)
 const hoveredKbId = ref('')
+const hideActionsTimer = ref<number | null>(null)
 
 // 对话框状态
 const kbDialogVisible = ref(false)
@@ -375,8 +424,9 @@ const kbFormRules = {
 }
 
 // 知识库详情相关
-const currentKb = ref<MockKnowledgeBase | null>(null)
+const currentKb = ref<KnowledgeBaseSummary | null>(null)
 const activeTab = ref('documents')
+const documentList = ref<DocumentInfo[]>([])
 
 // 测试配置
 const testConfig = reactive({
@@ -391,7 +441,7 @@ const testing = ref(false)
 const chatMessagesRef = ref()
 
 // 文件上传相关
-const fileList = ref([])
+const fileList = ref<{ raw: File; name: string; size: number }[]>([])
 const uploading = ref(false)
 
 // 手动录入相关
@@ -404,17 +454,15 @@ const manualInputForm = reactive({
 const getKbList = async () => {
   loading.value = true
   try {
-    // 使用模拟数据
-    let filteredList = [...mockKbList]
-    
-    if (searchForm.name) {
-      filteredList = filteredList.filter(kb => 
-        kb.name.toLowerCase().includes(searchForm.name.toLowerCase())
-      )
+    const params = {
+      name: searchForm.name || undefined,
+      page: pagination.currentPage,
+      size: pagination.pageSize
     }
     
-    kbList.value = filteredList
-    pagination.total = filteredList.length
+    const response = await listKb(params)
+    kbList.value = response.records
+    pagination.total = response.total
   } catch (error) {
     console.error('获取知识库列表失败:', error)
     ElMessage.error('获取知识库列表失败')
@@ -459,21 +507,71 @@ const hideActions = () => {
   hoveredKbId.value = ''
 }
 
+// 处理卡片鼠标离开事件
+const handleCardMouseLeave = () => {
+  // 延迟隐藏，避免闪屏
+  setTimeout(() => {
+    if (hoveredKbId.value) {
+      hideActions()
+    }
+  }, 150)
+}
+
+// 处理操作按钮区域鼠标进入事件
+const handleActionsMouseEnter = () => {
+  // 鼠标进入操作按钮区域时，保持显示状态
+  // 清除之前的隐藏定时器
+  if (hideActionsTimer.value) {
+    clearTimeout(hideActionsTimer.value)
+    hideActionsTimer.value = null
+  }
+}
+
+// 处理操作按钮区域鼠标离开事件
+const handleActionsMouseLeave = () => {
+  // 鼠标离开操作按钮区域时，延迟隐藏操作按钮
+  if (hideActionsTimer.value) {
+    clearTimeout(hideActionsTimer.value)
+  }
+  hideActionsTimer.value = setTimeout(() => {
+    hideActions()
+  }, 200)
+}
+
+// 处理下拉菜单显示状态变化
+const handleDropdownVisibleChange = (visible: boolean) => {
+  if (visible) {
+    // 下拉菜单打开时，保持操作按钮显示
+    // 不需要做任何操作，因为菜单已经打开
+  } else {
+    // 下拉菜单关闭时，延迟隐藏操作按钮
+    setTimeout(() => {
+      if (hoveredKbId.value) {
+        hideActions()
+      }
+    }, 200)
+  }
+}
+
 // 处理操作
-const handleAction = async (command: { action: string, kb: MockKnowledgeBase }) => {
+const handleAction = async (command: { action: string, kb: KnowledgeBaseSummary }) => {
   const { action, kb } = command
   
   if (action === 'edit') {
+    // 编辑操作：直接弹出编辑对话框
     handleEdit(kb)
   } else if (action === 'delete') {
+    // 删除操作：弹出确认对话框
     handleDelete(kb)
   }
 }
 
 // 点击知识库卡片
-const handleKbClick = (kb: MockKnowledgeBase) => {
+const handleKbClick = async (kb: KnowledgeBaseSummary) => {
   currentKb.value = kb
   detailDialogVisible.value = true
+  activeTab.value = 'documents'
+  await getDocumentList()
 }
 
 // 显示创建对话框
@@ -484,7 +582,7 @@ const showCreateDialog = () => {
 }
 
 // 编辑知识库
-const handleEdit = (kb: MockKnowledgeBase) => {
+const handleEdit = (kb: KnowledgeBaseSummary) => {
   isEdit.value = true
   Object.assign(kbForm, {
     id: kb.id,
@@ -499,7 +597,7 @@ const handleEdit = (kb: MockKnowledgeBase) => {
 }
 
 // 删除知识库
-const handleDelete = async (kb: MockKnowledgeBase) => {
+const handleDelete = async (kb: KnowledgeBaseSummary) => {
   try {
     await ElMessageBox.confirm(
       `确定要删除知识库 "${kb.name}" 吗？`,
@@ -511,12 +609,7 @@ const handleDelete = async (kb: MockKnowledgeBase) => {
       }
     )
     
-    // 从模拟数据中删除
-    const index = mockKbList.findIndex(item => item.id === kb.id)
-    if (index !== -1) {
-      mockKbList.splice(index, 1)
-    }
-    
+    await deleteKb(kb.id)
     ElMessage.success('删除成功')
     getKbList()
   } catch (error) {
@@ -538,32 +631,23 @@ const handleSaveKb = async () => {
     
     if (isEdit.value) {
       // 更新现有知识库
-      const index = mockKbList.findIndex(kb => kb.id === kbForm.id)
-      if (index !== -1) {
-        mockKbList[index] = {
-          ...mockKbList[index],
-          name: kbForm.name,
-          description: kbForm.description,
-          vectorModel: kbForm.vectorModel,
-          status: kbForm.status,
-          tags: kbForm.tags,
-          updatedAt: new Date().toISOString()
-        }
-      }
-      ElMessage.success('更新成功')
-    } else {
-      // 创建新知识库
-      const newKb: MockKnowledgeBase = {
-        id: Date.now().toString(),
+      await updateKb(kbForm.id, {
         name: kbForm.name,
         description: kbForm.description,
         vectorModel: kbForm.vectorModel,
         status: kbForm.status,
-        tags: kbForm.tags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      mockKbList.push(newKb)
+        tags: kbForm.tags
+      })
+      ElMessage.success('更新成功')
+    } else {
+      // 创建新知识库
+      await createKb({
+        name: kbForm.name,
+        description: kbForm.description,
+        vectorModel: kbForm.vectorModel,
+        status: kbForm.status,
+        tags: kbForm.tags
+      })
       ElMessage.success('创建成功')
     }
     
@@ -638,20 +722,42 @@ const handleFileChange = (file: any) => {
   console.log('文件变化:', file)
 }
 
+// 获取文档列表
+const getDocumentList = async () => {
+  if (!currentKb.value) return
+  
+  try {
+    const docs = await getDocuments(currentKb.value.id)
+    documentList.value = docs
+  } catch (error) {
+    console.error('获取文档列表失败:', error)
+    ElMessage.error('获取文档列表失败')
+  }
+}
+
 // 处理文件上传
 const handleUpload = async () => {
-  if (fileList.value.length === 0) {
-    ElMessage.warning('请选择要上传的文件')
-    return
-  }
+  if (!currentKb.value || !fileList.value.length) return
   
-  uploading.value = true
   try {
-    // 这里应该调用实际的上传API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    uploading.value = true
+    
+    for (const file of fileList.value) {
+      const content = await readFileContent(file.raw)
+      await addDocument(currentKb.value.id, {
+        title: file.name,
+        content: content,
+        type: file.name.split('.').pop() || 'text',
+        size: file.size
+      })
+    }
+    
     ElMessage.success('上传成功')
     uploadDialogVisible.value = false
+    fileList.value = []
+    getDocumentList()
   } catch (error) {
+    console.error('上传失败:', error)
     ElMessage.error('上传失败')
   } finally {
     uploading.value = false
@@ -660,60 +766,123 @@ const handleUpload = async () => {
 
 // 处理手动录入
 const handleManualInput = async () => {
-  if (!manualInputForm.title || !manualInputForm.content) {
+  if (!currentKb.value || !manualInputForm.title || !manualInputForm.content) {
     ElMessage.warning('请填写标题和内容')
     return
   }
   
   try {
-    // 这里应该调用实际的保存API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('保存成功')
+    await addDocument(currentKb.value.id, {
+      title: manualInputForm.title,
+      content: manualInputForm.content,
+      type: 'text',
+      size: manualInputForm.content.length
+    })
+    
+    ElMessage.success('添加成功')
     manualInputDialogVisible.value = false
+    manualInputForm.title = ''
+    manualInputForm.content = ''
+    getDocumentList()
   } catch (error) {
-    ElMessage.error('保存失败')
+    console.error('添加失败:', error)
+    ElMessage.error('添加失败')
   }
 }
 
-// 发送测试
+// 处理命中测试
 const handleSendTest = async () => {
-  if (!testInput.value.trim()) {
+  if (!currentKb.value || !testInput.value.trim()) {
     ElMessage.warning('请输入测试内容')
     return
   }
   
-  const userMessage = {
-    type: 'user',
-    content: testInput.value,
-    timestamp: new Date()
-  }
-  
-  chatMessages.value.push(userMessage)
-  const currentInput = testInput.value
-  testInput.value = ''
-  testing.value = true
-  
   try {
-    // 这里应该调用实际的测试API
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    testing.value = true
     
-    const aiMessage = {
-      type: 'ai',
-      content: `这是对"${currentInput}"的测试回复，基于知识库"${currentKb.value?.name}"的检索结果。`,
-      timestamp: new Date()
+    const request: TestQueryRequest = {
+      query: testInput.value.trim(),
+      topK: testConfig.topK,
+      scoreThreshold: testConfig.scoreThreshold
     }
     
-    chatMessages.value.push(aiMessage)
+    const response = await testQuery(currentKb.value.id, request)
+    
+    // 添加用户消息
+    chatMessages.value.push({
+      type: 'user',
+      content: testInput.value.trim(),
+      timestamp: new Date()
+    })
+    
+    // 添加AI回复
+    chatMessages.value.push({
+      type: 'ai',
+      content: response.answer,
+      timestamp: new Date()
+    })
+    
+    testInput.value = ''
     
     // 滚动到底部
-    await nextTick()
-    if (chatMessagesRef.value) {
-      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
-    }
+    setTimeout(() => {
+      if (chatMessagesRef.value) {
+        chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
+      }
+    }, 100)
+    
   } catch (error) {
+    console.error('测试失败:', error)
     ElMessage.error('测试失败')
   } finally {
     testing.value = false
+  }
+}
+
+// 读取文件内容
+const readFileContent = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      resolve(e.target?.result as string)
+    }
+    reader.onerror = reject
+    reader.readAsText(file)
+  })
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// 删除文档
+const handleDeleteDocument = async (doc: DocumentInfo) => {
+  if (!currentKb.value) return
+  
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除文档 "${doc.title}" 吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    await deleteDocument(currentKb.value.id, doc.id)
+    ElMessage.success('删除成功')
+    getDocumentList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
   }
 }
 
@@ -841,6 +1010,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
+  position: relative;
 }
 
 .kb-name {
@@ -853,16 +1023,44 @@ onMounted(() => {
 
 .kb-actions {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn {
   padding: 4px;
   color: #909399;
+  border: none;
+  background: transparent;
 }
 
 .action-btn:hover {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* 下拉菜单样式 */
+:deep(.kb-actions-dropdown) {
+  margin-top: 5px;
+}
+
+:deep(.kb-actions-dropdown .el-dropdown-menu) {
+  min-width: 120px;
+  padding: 5px 0;
+}
+
+:deep(.kb-actions-dropdown .el-dropdown-menu__item) {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+:deep(.kb-actions-dropdown .el-dropdown-menu__item:hover) {
+  background-color: #f5f7fa;
   color: #409eff;
 }
 

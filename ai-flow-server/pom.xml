@@ -128,6 +128,7 @@
       <version>0.27.1</version>
     </dependency>
     
+    <!-- 暂时注释掉有问题的依赖
     <dependency>
       <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j-ollama</artifactId>
@@ -169,6 +170,7 @@
       <artifactId>langchain4j-deepseek</artifactId>
       <version>0.27.1</version>
     </dependency>
+    -->
     
     <dependency>
       <groupId>org.springframework.boot</groupId>
