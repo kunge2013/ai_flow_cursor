@@ -6,6 +6,7 @@ import dev.langchain4j.data.segment.TextSegment;
 // import dev.langchain4j.model.embedding.OpenAiEmbeddingModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "ai.model.openai", name = "enable", havingValue = "true")
 public class OpenAiEmbeddingModelImpl implements EmbeddingModel {
     
     // private final OpenAiEmbeddingModel embeddingModel;

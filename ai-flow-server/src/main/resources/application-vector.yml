@@ -6,6 +6,7 @@ ai:
       api-key: ${ZHIPU_AI_API_KEY:your-zhipu-ai-api-key}
       embedding-model: text-embedding-v2
       base-url: https://open.bigmodel.cn
+      enable: true
     
     # OpenAI配置
     openai:
