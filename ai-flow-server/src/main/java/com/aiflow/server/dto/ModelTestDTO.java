@@ -41,4 +41,10 @@ public class ModelTestDTO {
      * 温度参数
      */
     private Double temperature = 0.7;
+
+
+    /**
+     * Top-P参数
+     */
+    private Double topP = 1.0;
 } 

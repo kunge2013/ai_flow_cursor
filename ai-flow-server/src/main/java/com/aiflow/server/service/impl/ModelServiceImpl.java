@@ -11,7 +11,9 @@ import com.aiflow.server.entity.Model;
 import com.aiflow.server.mapper.ModelMapper;
 import com.aiflow.server.service.ModelService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -105,17 +107,21 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
     @Override
     public String testModel(ModelTestDTO testDTO) {
         try {
+            Model model = getById(testDTO.getModelId());
             // 根据模型类型获取对应的适配器
-            String modelType = determineModelType(testDTO.getApiEndpoint());
+            String modelType = determineModelType(model.getApiEndpoint());
             AiModelType aiModelType = AiModelType.fromCode(modelType);
             AiModelAdapter adapter = aiModelFactory.getAdapter(aiModelType);
-            
+
             // 创建 AiModelConfig 对象
             AiModelConfig config = AiModelConfig.builder()
                     .type(aiModelType)
-                    .apiEndpoint(testDTO.getApiEndpoint())
-                    .apiKey(testDTO.getApiKey())
-                    .baseModel("test-model") // 使用默认值
+                    .apiEndpoint(model.getApiEndpoint())
+                    .apiKey(model.getApiKey())
+                    .temperature(model.getTemperature())
+                    .maxTokens(model.getMaxTokens())
+                    .topP(model.getTopP())
+                    .baseModel(model.getModelType()) // 使用默认值
                     .build();
             
             log.info("使用适配器 {} 测试模型连接", adapter.getSupportedType());
@@ -185,6 +191,9 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
                     .apiEndpoint(modelDTO.getApiEndpoint())
                     .apiKey(modelDTO.getApiKey())
                     .baseModel(modelDTO.getBaseModel())
+                    .temperature(modelDTO.getTemperature())
+                    .maxTokens(modelDTO.getMaxTokens())
+                    .topP(modelDTO.getTopP())
                     .build();
             
             return adapter.isValidConfig(config);
@@ -208,17 +217,19 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         String endpoint = apiEndpoint.toLowerCase();
         
         if (endpoint.contains("zhipu") || endpoint.contains("bigmodel.cn")) {
-            return "zhipu";
+            return "zhipu-ai";
         } else if (endpoint.contains("deepseek")) {
             return "deepseek";
         } else if (endpoint.contains("openai") || endpoint.contains("api.openai.com")) {
             return "openai";
         } else if (endpoint.contains("anthropic") || endpoint.contains("claude")) {
-            return "claude";
+            return "anthropic";
         } else if (endpoint.contains("gemini") || endpoint.contains("google")) {
-            return "gemini";
+            return "google-gemini";
         } else if (endpoint.contains("qianfan") || endpoint.contains("dashscope")) {
             return "qianfan";
+        } else if (endpoint.contains("ollama")) {
+            return "ollama";
         } else {
             return "openai"; // 默认类型
         }
