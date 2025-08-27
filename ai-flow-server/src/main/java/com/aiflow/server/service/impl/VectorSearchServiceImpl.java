@@ -2,6 +2,12 @@ package com.aiflow.server.service.impl;
 
 import com.aiflow.server.dto.VectorSearchDtos.*;
 import com.aiflow.server.service.VectorSearchService;
+import com.aiflow.aimodel.service.VectorService;
+import com.aiflow.aimodel.service.RagService;
+import com.aiflow.aimodel.service.VectorService.VectorEmbeddingResult;
+import com.aiflow.aimodel.service.VectorService.VectorSearchResult;
+import com.aiflow.aimodel.service.VectorService.VectorStatistics;
+import com.aiflow.aimodel.dto.VectorDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,6 +31,8 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     private final ExecutorService executorService = Executors.newFixedThreadPool(4);
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final VectorService vectorService;
+    private final RagService ragService;
     
     @Value("${ai.model.zhipu-ai.api-key:}")
     private String zhipuApiKey;
@@ -31,42 +40,37 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     @Value("${ai.model.zhipu-ai.embedding-model:text-embedding-v2}")
     private String zhipuEmbeddingModel;
     
-    // 向量模型配置映射
-    private final Map<String, String> vectorModelConfigs = Map.of(
-        "openai", "text-embedding-ada-002",
-        "zhipu", "text-embedding-v2",
-        "deepseek", "deepseek-embedding"
-    );
+    @Value("${ai.model.openai.api-key:}")
+    private String openaiApiKey;
+    
+    @Value("${ai.model.openai.embedding-model:text-embedding-ada-002}")
+    private String openaiEmbeddingModel;
+    
+    @Value("${ai.model.ollama.base-url:http://localhost:11434}")
+    private String ollamaBaseUrl;
+
+    public VectorSearchServiceImpl(VectorService vectorService, RagService ragService) {
+        this.vectorService = vectorService;
+        this.ragService = ragService;
+    }
 
     @Override
     public VectorEmbeddingResponse embedDocument(String content, String vectorModel) {
         try {
             log.info("开始向量化文档，模型: {}, 内容长度: {}", vectorModel, content.length());
             
-            List<Double> embedding;
+            // 使用新的向量服务
+            VectorEmbeddingResult result = vectorService.embedDocument(content, vectorModel);
             
-            // 根据模型类型选择不同的实现
-            switch (vectorModel.toLowerCase()) {
-                case "zhipu":
-                case "zhipu-ai":
-                    embedding = callZhipuAiApi(content);
-                    break;
-                case "openai":
-                    embedding = generateMockEmbedding(content, "openai");
-                    break;
-                default:
-                    embedding = generateMockEmbedding(content, vectorModel);
-                    break;
-            }
-            
+            // 转换为响应对象
             VectorEmbeddingResponse response = new VectorEmbeddingResponse();
-            response.setContent(content);
-            response.setEmbedding(embedding);
-            response.setVectorModel(vectorModel);
-            response.setTokenCount((long) content.length() / 4); // 粗略估算token数量
-            response.setCost(0L); // 成本计算需要根据实际API定价
+            response.setContent(result.getContent());
+            response.setEmbedding(result.getEmbedding());
+            response.setVectorModel(result.getVectorModel());
+            response.setTokenCount(result.getTokenCount());
+            response.setCost(result.getCost());
             
-            log.info("文档向量化完成，向量维度: {}", embedding.size());
+            log.info("文档向量化完成，向量维度: {}", result.getEmbedding().size());
             return response;
             
         } catch (Exception e) {
@@ -78,22 +82,29 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     @Override
     public VectorSearchResponse searchSimilar(String query, String kbId, int topK, double scoreThreshold) {
         try {
-            log.info("开始向量相似度搜索，查询: {}, 知识库: {}, topK: {}, 阈值: {}", 
+            log.info("开始使用新的向量服务进行相似度搜索，查询: {}, 知识库: {}, topK: {}, 阈值: {}", 
                     query, kbId, topK, scoreThreshold);
             
-            // 1. 向量化查询
-            VectorEmbeddingResponse queryEmbedding = embedDocument(query, "zhipu"); // 默认使用智普AI
+            // 使用新的向量服务进行搜索
+            VectorSearchResult result = vectorService.searchSimilar(query, kbId, topK, scoreThreshold);
             
-            // 2. 在知识库中搜索相似向量
-            List<VectorSearchResult> results = searchSimilarVectors(queryEmbedding.getEmbedding(), kbId, topK, scoreThreshold);
-            
+            // 构建响应
             VectorSearchResponse response = new VectorSearchResponse();
             response.setQuery(query);
-            response.setResults(results);
-            response.setTotalCount((long) results.size());
+            
+            if (result != null) {
+                response.setTotalCount(1L);
+                List<com.aiflow.server.dto.VectorSearchDtos.VectorSearchResult> results = new ArrayList<>();
+                results.add(convertToVectorSearchResult(result));
+                response.setResults(results);
+            } else {
+                response.setTotalCount(0L);
+                response.setResults(new ArrayList<>());
+            }
+            
             response.setSearchTime(System.currentTimeMillis());
             
-            log.info("向量搜索完成，找到 {} 个结果", results.size());
+            log.info("向量搜索完成，找到 {} 个结果", response.getTotalCount());
             return response;
             
         } catch (Exception e) {
@@ -107,28 +118,16 @@ public class VectorSearchServiceImpl implements VectorSearchService {
         try {
             log.info("开始批量向量化文档，数量: {}, 模型: {}", contents.size(), vectorModel);
             
-            List<CompletableFuture<VectorEmbeddingResponse>> futures = new ArrayList<>();
+            // 使用新的向量服务进行批量处理
+            List<VectorEmbeddingResult> results = vectorService.batchEmbedDocuments(contents, vectorModel);
             
-            for (String content : contents) {
-                CompletableFuture<VectorEmbeddingResponse> future = CompletableFuture.supplyAsync(() -> 
-                    embedDocument(content, vectorModel), executorService);
-                futures.add(future);
-            }
+            // 转换为响应对象
+            List<VectorEmbeddingResponse> responses = results.stream()
+                    .map(this::convertToVectorEmbeddingResponse)
+                    .collect(Collectors.toList());
             
-            // 等待所有任务完成
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                futures.toArray(new CompletableFuture[0])
-            );
-            
-            allFutures.join();
-            
-            List<VectorEmbeddingResponse> results = new ArrayList<>();
-            for (CompletableFuture<VectorEmbeddingResponse> future : futures) {
-                results.add(future.get());
-            }
-            
-            log.info("批量向量化完成，成功处理 {} 个文档", results.size());
-            return results;
+            log.info("批量向量化完成，成功处理 {} 个文档", responses.size());
+            return responses;
             
         } catch (Exception e) {
             log.error("批量向量化失败", e);
@@ -139,18 +138,15 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     @Override
     public void saveDocumentVector(String documentId, String kbId, String content, String vectorModel) {
         try {
-            log.info("保存文档向量，文档ID: {}, 知识库: {}, 模型: {}", documentId, kbId, vectorModel);
+            log.info("开始保存文档向量，文档ID: {}, 知识库: {}, 模型: {}", documentId, kbId, vectorModel);
             
-            // 1. 向量化文档内容
-            VectorEmbeddingResponse embedding = embedDocument(content, vectorModel);
+            // 使用新的向量服务保存文档向量
+            vectorService.saveDocumentVector(documentId, kbId, content, vectorModel);
             
-            // 2. 保存到向量数据库（这里应该调用实际的向量数据库API）
-            saveToVectorDatabase(documentId, kbId, embedding);
-            
-            log.info("文档向量保存成功");
+            log.info("文档向量保存成功，文档ID: {}", documentId);
             
         } catch (Exception e) {
-            log.error("保存文档向量失败", e);
+            log.error("保存文档向量失败，文档ID: {}", documentId, e);
             throw new RuntimeException("保存文档向量失败: " + e.getMessage());
         }
     }
@@ -158,15 +154,15 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     @Override
     public void deleteDocumentVector(String documentId) {
         try {
-            log.info("删除文档向量，文档ID: {}", documentId);
+            log.info("开始删除文档向量，文档ID: {}", documentId);
             
-            // 从向量数据库中删除
-            deleteFromVectorDatabase(documentId);
+            // 使用新的向量服务删除文档向量
+            vectorService.deleteDocumentVector(documentId);
             
-            log.info("文档向量删除成功");
+            log.info("文档向量删除成功，文档ID: {}", documentId);
             
         } catch (Exception e) {
-            log.error("删除文档向量失败", e);
+            log.error("删除文档向量失败，文档ID: {}", documentId, e);
             throw new RuntimeException("删除文档向量失败: " + e.getMessage());
         }
     }
@@ -174,175 +170,171 @@ public class VectorSearchServiceImpl implements VectorSearchService {
     @Override
     public void updateDocumentVector(String documentId, String content, String vectorModel) {
         try {
-            log.info("更新文档向量，文档ID: {}, 模型: {}", documentId, vectorModel);
+            log.info("开始更新文档向量，文档ID: {}, 模型: {}", documentId, vectorModel);
             
-            // 1. 重新向量化文档内容
-            VectorEmbeddingResponse embedding = embedDocument(content, vectorModel);
+            // 使用新的向量服务更新文档向量
+            vectorService.updateDocumentVector(documentId, content, vectorModel);
             
-            // 2. 更新向量数据库
-            updateInVectorDatabase(documentId, embedding);
-            
-            log.info("文档向量更新成功");
+            log.info("文档向量更新成功，文档ID: {}", documentId);
             
         } catch (Exception e) {
-            log.error("更新文档向量失败", e);
+            log.error("更新文档向量失败，文档ID: {}", documentId, e);
             throw new RuntimeException("更新文档向量失败: " + e.getMessage());
         }
     }
 
-    // 私有辅助方法
-    
     /**
-     * 调用智普AI API进行向量化
+     * 批量保存文档向量
      */
-    private List<Double> callZhipuAiApi(String text) throws Exception {
-        if (zhipuApiKey == null || zhipuApiKey.trim().isEmpty()) {
-            log.warn("智普AI API Key未配置，使用模拟向量");
-            return generateMockEmbedding(text, "zhipu");
-        }
-        
-        String url = "https://open.bigmodel.cn/api/paas/v4/embeddings";
-        
-        // 构建请求体
-        String requestBody = String.format(
-            "{\"model\":\"%s\",\"input\":[\"%s\"]}",
-            zhipuEmbeddingModel,
-            text.replace("\"", "\\\"")
-        );
-        
-        // 创建HTTP请求
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + zhipuApiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-        
+    public void batchSaveDocumentVectors(List<DocumentVectorRequest> requests) {
         try {
-            // 发送请求
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            log.info("开始批量保存文档向量，数量: {}", requests.size());
             
-            if (response.statusCode() != 200) {
-                log.warn("智普AI API调用失败: {}，使用模拟向量", response.statusCode());
-                return generateMockEmbedding(text, "zhipu");
+            // 使用线程池并行处理
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            
+            for (DocumentVectorRequest request : requests) {
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                    try {
+                        vectorService.saveDocumentVector(
+                            request.getDocumentId(), 
+                            request.getKbId(), 
+                            request.getContent(), 
+                            request.getVectorModel()
+                        );
+                    } catch (Exception e) {
+                        log.error("批量保存文档向量失败，文档ID: {}", request.getDocumentId(), e);
+                    }
+                }, executorService);
+                
+                futures.add(future);
             }
             
-            // 解析响应
-            JsonNode responseJson = objectMapper.readTree(response.body());
+            // 等待所有任务完成
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                futures.toArray(new CompletableFuture[0])
+            );
             
-            if (responseJson.has("error")) {
-                log.warn("智普AI API返回错误: {}，使用模拟向量", responseJson.get("error").asText());
-                return generateMockEmbedding(text, "zhipu");
-            }
+            allFutures.join();
             
-            // 提取向量数据
-            JsonNode data = responseJson.get("data");
-            if (data == null || !data.isArray() || data.size() == 0) {
-                log.warn("智普AI API响应格式错误，使用模拟向量");
-                return generateMockEmbedding(text, "zhipu");
-            }
-            
-            JsonNode embedding = data.get(0).get("embedding");
-            if (embedding == null || !embedding.isArray()) {
-                log.warn("智普AI API响应中缺少向量数据，使用模拟向量");
-                return generateMockEmbedding(text, "zhipu");
-            }
-            
-            // 转换为Double列表
-            List<Double> result = new ArrayList<>();
-            for (JsonNode value : embedding) {
-                result.add(value.asDouble());
-            }
-            
-            return result;
+            log.info("批量保存文档向量完成，成功处理 {} 个文档", requests.size());
             
         } catch (Exception e) {
-            log.warn("智普AI API调用异常: {}，使用模拟向量", e.getMessage());
-            return generateMockEmbedding(text, "zhipu");
+            log.error("批量保存文档向量失败", e);
+            throw new RuntimeException("批量保存文档向量失败: " + e.getMessage());
         }
     }
-    
+
     /**
-     * 生成模拟的向量数据
+     * 获取文档向量信息
      */
-    private List<Double> generateMockEmbedding(String content, String vectorModel) {
-        // 生成模拟的向量数据
-        int dimension = getVectorDimension(vectorModel);
-        List<Double> embedding = new ArrayList<>();
-        
-        Random random = new Random(content.hashCode()); // 使用内容hash作为种子，确保相同内容生成相同向量
-        
-        for (int i = 0; i < dimension; i++) {
-            embedding.add(random.nextDouble() * 2 - 1); // 生成-1到1之间的随机数
-        }
-        
-        // 归一化向量
-        double magnitude = Math.sqrt(embedding.stream().mapToDouble(x -> x * x).sum());
-        for (int i = 0; i < embedding.size(); i++) {
-            embedding.set(i, embedding.get(i) / magnitude);
-        }
-        
-        return embedding;
-    }
-    
-    private int getVectorDimension(String vectorModel) {
-        return switch (vectorModel.toLowerCase()) {
-            case "openai" -> 1536;
-            case "zhipu" -> 1024;
-            case "deepseek" -> 1024;
-            default -> 1024;
-        };
-    }
-    
-    private List<VectorSearchResult> searchSimilarVectors(List<Double> queryEmbedding, String kbId, int topK, double scoreThreshold) {
-        // 这里应该调用实际的向量数据库进行相似度搜索
-        // 目前返回模拟结果，实际实现时需要：
-        // 1. 从向量数据库中检索相似向量
-        // 2. 计算余弦相似度
-        // 3. 按相似度排序
-        // 4. 返回topK结果
-        
-        List<VectorSearchResult> results = new ArrayList<>();
-        
-        // 模拟结果
-        for (int i = 0; i < Math.min(topK, 3); i++) {
-            VectorSearchResult result = new VectorSearchResult();
-            result.setDocumentId("doc_" + i);
-            result.setTitle("示例文档 " + (i + 1));
-            result.setContent("这是示例文档的内容，用于演示向量搜索功能。");
-            result.setScore(0.9 - i * 0.1); // 模拟相似度分数
-            result.setMetadata("{\"source\": \"vector_search\", \"type\": \"text\"}");
+    public DocumentVectorInfo getDocumentVector(String documentId) {
+        try {
+            log.info("获取文档向量信息，文档ID: {}", documentId);
             
-            if (result.getScore() >= scoreThreshold) {
-                results.add(result);
-            }
+            // 这里需要根据实际情况实现
+            // 暂时返回模拟数据
+            DocumentVectorInfo info = new DocumentVectorInfo();
+            info.setDocumentId(documentId);
+            info.setLastUpdated(System.currentTimeMillis());
+            
+            log.info("获取文档向量信息成功，文档ID: {}", documentId);
+            return info;
+            
+        } catch (Exception e) {
+            log.error("获取文档向量信息失败，文档ID: {}", documentId, e);
+            throw new RuntimeException("获取文档向量信息失败: " + e.getMessage());
         }
-        
-        return results;
     }
-    
-    private void saveToVectorDatabase(String documentId, String kbId, VectorEmbeddingResponse embedding) {
-        // 这里应该调用实际的向量数据库API
-        // 例如：Milvus、Pinecone、Weaviate等
-        log.debug("保存向量到数据库: {}", documentId);
-        
-        // TODO: 实现真实的向量数据库保存逻辑
-        // 1. 将向量数据存储到向量数据库
-        // 2. 建立文档ID和向量的映射关系
-        // 3. 创建向量索引用于快速检索
+
+    /**
+     * 搜索相似文档（增强版）
+     */
+    public EnhancedVectorSearchResponse enhancedSearchSimilar(String query, String kbId, int topK, double scoreThreshold) {
+        try {
+            log.info("开始增强相似度搜索，查询: {}, 知识库: {}, topK: {}, 阈值: {}", 
+                    query, kbId, topK, scoreThreshold);
+            
+            // 使用新的向量服务进行搜索
+            VectorSearchResult result = vectorService.searchSimilar(query, kbId, topK, scoreThreshold);
+            
+            // 构建增强响应
+            EnhancedVectorSearchResponse enhancedResponse = new EnhancedVectorSearchResponse();
+            enhancedResponse.setQuery(query);
+            enhancedResponse.setKbId(kbId);
+            
+            if (result != null) {
+                List<com.aiflow.server.dto.VectorSearchDtos.VectorSearchResult> results = new ArrayList<>();
+                results.add(convertToVectorSearchResult(result));
+                enhancedResponse.setResults(results);
+                enhancedResponse.setTotalResults(1);
+            } else {
+                enhancedResponse.setResults(new ArrayList<>());
+                enhancedResponse.setTotalResults(0);
+            }
+            
+            enhancedResponse.setSearchTime(System.currentTimeMillis());
+            enhancedResponse.setVectorModel(getVectorModelByKbId(kbId));
+            
+            // 添加搜索统计信息
+            SearchStatistics stats = new SearchStatistics();
+            stats.setQueryLength(query.length());
+            stats.setResultCount(enhancedResponse.getTotalResults());
+            if (enhancedResponse.getTotalResults() > 0) {
+                stats.setAverageScore(enhancedResponse.getResults().get(0).getScore());
+            } else {
+                stats.setAverageScore(0.0);
+            }
+            enhancedResponse.setStatistics(stats);
+            
+            log.info("增强相似度搜索完成，找到 {} 个结果", enhancedResponse.getTotalResults());
+            return enhancedResponse;
+            
+        } catch (Exception e) {
+            log.error("增强相似度搜索失败", e);
+            throw new RuntimeException("增强相似度搜索失败: " + e.getMessage());
+        }
     }
-    
-    private void deleteFromVectorDatabase(String documentId) {
-        // 这里应该调用实际的向量数据库API
-        log.debug("从数据库删除向量: {}", documentId);
-        
-        // TODO: 实现真实的向量数据库删除逻辑
+
+    /**
+     * 转换VectorSearchResult为VectorSearchResult
+     */
+    private com.aiflow.server.dto.VectorSearchDtos.VectorSearchResult convertToVectorSearchResult(com.aiflow.aimodel.service.VectorService.VectorSearchResult result) {
+        com.aiflow.server.dto.VectorSearchDtos.VectorSearchResult response = new com.aiflow.server.dto.VectorSearchDtos.VectorSearchResult();
+        response.setTitle(result.getTitle());
+        response.setContent(result.getContent());
+        response.setScore(result.getScore());
+        response.setDocumentId(result.getDocumentId());
+        response.setMetadata(result.getKbId()); // 使用metadata字段存储kbId
+        return response;
     }
-    
-    private void updateInVectorDatabase(String documentId, VectorEmbeddingResponse embedding) {
-        // 这里应该调用实际的向量数据库API
-        log.debug("更新数据库中的向量: {}", documentId);
-        
-        // TODO: 实现真实的向量数据库更新逻辑
+
+    /**
+     * 转换VectorEmbeddingResult为VectorEmbeddingResponse
+     */
+    private VectorEmbeddingResponse convertToVectorEmbeddingResponse(VectorEmbeddingResult result) {
+        VectorEmbeddingResponse response = new VectorEmbeddingResponse();
+        response.setContent(result.getContent());
+        response.setEmbedding(result.getEmbedding());
+        response.setVectorModel(result.getVectorModel());
+        response.setTokenCount(result.getTokenCount());
+        response.setCost(result.getCost());
+        // VectorEmbeddingResponse没有documentId字段，所以不设置
+        return response;
+    }
+
+    /**
+     * 获取知识库的向量模型
+     */
+    private String getVectorModelByKbId(String kbId) {
+        try {
+            // 这里应该查询数据库获取向量模型
+            // 目前返回默认值
+            return "openai";
+            
+        } catch (Exception e) {
+            log.error("获取向量模型失败，知识库ID: {}", kbId, e);
+            return "openai";
+        }
     }
 } 

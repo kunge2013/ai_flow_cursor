@@ -1,220 +1,155 @@
 package com.aiflow.aimodel.service;
 
-import com.aiflow.aimodel.embedding.EmbeddingModel;
-import com.aiflow.aimodel.factory.EmbeddingModelFactory;
-import com.aiflow.aimodel.factory.VectorStoreFactory;
-import com.aiflow.aimodel.vectorstore.VectorStore;
-import dev.langchain4j.data.document.Document;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.store.embedding.EmbeddingMatch;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Map;
 
 /**
- * 向量服务
+ * 向量服务接口
+ * 提供文档向量化、向量搜索等核心功能
  */
-@Slf4j
-@Service
-public class VectorService {
+public interface VectorService {
     
-    private final EmbeddingModelFactory embeddingModelFactory;
-    private final VectorStoreFactory vectorStoreFactory;
+    /**
+     * 向量化文档内容
+     * @param content 文档内容
+     * @param vectorModel 向量模型名称
+     * @return 向量化结果
+     */
+    VectorEmbeddingResult embedDocument(String content, String vectorModel);
     
-    @Autowired
-    public VectorService(EmbeddingModelFactory embeddingModelFactory, VectorStoreFactory vectorStoreFactory) {
-        this.embeddingModelFactory = embeddingModelFactory;
-        this.vectorStoreFactory = vectorStoreFactory;
+    /**
+     * 向量相似度搜索
+     * @param query 查询文本
+     * @param kbId 知识库ID
+     * @param topK 返回结果数量
+     * @param scoreThreshold 相似度阈值
+     * @return 搜索结果
+     */
+    VectorSearchResult searchSimilar(String query, String kbId, int topK, double scoreThreshold);
+    
+    /**
+     * 批量向量化文档
+     * @param contents 文档内容列表
+     * @param vectorModel 向量模型名称
+     * @return 向量化结果列表
+     */
+    List<VectorEmbeddingResult> batchEmbedDocuments(List<String> contents, String vectorModel);
+    
+    /**
+     * 保存文档向量
+     * @param documentId 文档ID
+     * @param kbId 知识库ID
+     * @param content 文档内容
+     * @param vectorModel 向量模型名称
+     */
+    void saveDocumentVector(String documentId, String kbId, String content, String vectorModel);
+    
+    /**
+     * 删除文档向量
+     * @param documentId 文档ID
+     */
+    void deleteDocumentVector(String documentId);
+    
+    /**
+     * 更新文档向量
+     * @param documentId 文档ID
+     * @param content 文档内容
+     * @param vectorModel 向量模型名称
+     */
+    void updateDocumentVector(String documentId, String content, String vectorModel);
+    
+    /**
+     * 获取向量统计信息
+     * @param kbId 知识库ID
+     * @return 统计信息
+     */
+    VectorStatistics getVectorStatistics(String kbId);
+    
+    /**
+     * 向量嵌入结果
+     */
+    class VectorEmbeddingResult {
+        private String content;
+        private List<Double> embedding;
+        private String vectorModel;
+        private Long tokenCount;
+        private Long cost;
+        private String documentId;
+        
+        // Getters and Setters
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+        
+        public List<Double> getEmbedding() { return embedding; }
+        public void setEmbedding(List<Double> embedding) { this.embedding = embedding; }
+        
+        public String getVectorModel() { return vectorModel; }
+        public void setVectorModel(String vectorModel) { this.vectorModel = vectorModel; }
+        
+        public Long getTokenCount() { return tokenCount; }
+        public void setTokenCount(Long tokenCount) { this.tokenCount = tokenCount; }
+        
+        public Long getCost() { return cost; }
+        public void setCost(Long cost) { this.cost = cost; }
+        
+        public String getDocumentId() { return documentId; }
+        public void setDocumentId(String documentId) { this.documentId = documentId; }
     }
     
     /**
-     * 添加文档到向量存储
+     * 向量搜索结果
      */
-    public String addDocument(String collectionName, Document document, String embeddingModelType) {
-        try {
-            // 获取向量模型
-            EmbeddingModel embeddingModel = embeddingModelFactory.getEmbeddingModel(embeddingModelType);
-            
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            
-            // 添加文档
-            String documentId = vectorStore.addDocument(collectionName, document);
-            
-            log.info("文档添加成功，集合: {}, ID: {}, 向量模型: {}", collectionName, documentId, embeddingModelType);
-            return documentId;
-            
-        } catch (Exception e) {
-            log.error("添加文档失败: {}", e.getMessage(), e);
-            throw new RuntimeException("添加文档失败", e);
-        }
+    class VectorSearchResult {
+        private String title;
+        private String content;
+        private double score;
+        private String documentId;
+        private String kbId;
+        
+        // Getters and Setters
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+        
+        public double getScore() { return score; }
+        public void setScore(double score) { this.score = score; }
+        
+        public String getDocumentId() { return documentId; }
+        public void setDocumentId(String documentId) { this.documentId = documentId; }
+        
+        public String getKbId() { return kbId; }
+        public void setKbId(String kbId) { this.kbId = kbId; }
     }
     
     /**
-     * 批量添加文档到向量存储
+     * 向量统计信息
      */
-    public List<String> addDocuments(String collectionName, List<Document> documents, String embeddingModelType) {
-        try {
-            // 获取向量模型
-            EmbeddingModel embeddingModel = embeddingModelFactory.getEmbeddingModel(embeddingModelType);
-            
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            
-            // 批量添加文档
-            List<String> documentIds = vectorStore.addDocuments(collectionName, documents);
-            
-            log.info("批量文档添加成功，集合: {}, 数量: {}, 向量模型: {}", collectionName, documentIds.size(), embeddingModelType);
-            return documentIds;
-            
-        } catch (Exception e) {
-            log.error("批量添加文档失败: {}", e.getMessage(), e);
-            throw new RuntimeException("批量添加文档失败", e);
-        }
-    }
-    
-    /**
-     * 相似性搜索
-     */
-    public List<EmbeddingMatch<TextSegment>> search(String collectionName, String query, int maxResults, String embeddingModelType) {
-        try {
-            // 获取向量模型
-            EmbeddingModel embeddingModel = embeddingModelFactory.getEmbeddingModel(embeddingModelType);
-            
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            
-            // 执行搜索
-            List<EmbeddingMatch<TextSegment>> results = vectorStore.findRelevant(collectionName, query, maxResults);
-            
-            log.info("相似性搜索成功，集合: {}, 查询: {}, 结果数量: {}", collectionName, query, results.size());
-            return results;
-            
-        } catch (Exception e) {
-            log.error("相似性搜索失败: {}", e.getMessage(), e);
-            throw new RuntimeException("相似性搜索失败", e);
-        }
-    }
-    
-    /**
-     * 使用向量进行搜索
-     */
-    public List<EmbeddingMatch<TextSegment>> searchByVector(String collectionName, List<Float> queryEmbedding, int maxResults) {
-        try {
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            
-            // 执行向量搜索
-            List<EmbeddingMatch<TextSegment>> results = vectorStore.findRelevant(collectionName, queryEmbedding, maxResults);
-            
-            log.info("向量搜索成功，集合: {}, 结果数量: {}", collectionName, results.size());
-            return results;
-            
-        } catch (Exception e) {
-            log.error("向量搜索失败: {}", e.getMessage(), e);
-            throw new RuntimeException("向量搜索失败", e);
-        }
-    }
-    
-    /**
-     * 创建集合
-     */
-    public boolean createCollection(String collectionName) {
-        try {
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            boolean result = vectorStore.createCollection(collectionName);
-            
-            if (result) {
-                log.info("集合创建成功: {}", collectionName);
-            } else {
-                log.warn("集合创建失败: {}", collectionName);
-            }
-            
-            return result;
-        } catch (Exception e) {
-            log.error("创建集合失败: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-    
-    /**
-     * 删除集合
-     */
-    public boolean deleteCollection(String collectionName) {
-        try {
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            boolean result = vectorStore.deleteCollection(collectionName);
-            
-            if (result) {
-                log.info("集合删除成功: {}", collectionName);
-            } else {
-                log.warn("集合删除失败: {}", collectionName);
-            }
-            
-            return result;
-        } catch (Exception e) {
-            log.error("删除集合失败: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-    
-    /**
-     * 获取集合信息
-     */
-    public Map<String, Object> getCollectionInfo(String collectionName) {
-        try {
-            VectorStore vectorStore = vectorStoreFactory.getDefaultVectorStore();
-            
-            Map<String, Object> info = Map.of(
-                "name", collectionName,
-                "exists", vectorStore.collectionExists(collectionName),
-                "size", vectorStore.getCollectionSize(collectionName),
-                "storeType", vectorStore.getStoreType(),
-                "storeName", vectorStore.getStoreName()
-            );
-            
-            return info;
-        } catch (Exception e) {
-            log.error("获取集合信息失败: {}", e.getMessage(), e);
-            return Map.of("error", e.getMessage());
-        }
-    }
-    
-    /**
-     * 测试所有连接
-     */
-    public Map<String, Object> testConnections() {
-        try {
-            Map<String, Boolean> embeddingResults = embeddingModelFactory.testAllConnections();
-            Map<String, Boolean> vectorStoreResults = vectorStoreFactory.testAllConnections();
-            
-            Map<String, Object> results = Map.of(
-                "embeddingModels", embeddingResults,
-                "vectorStores", vectorStoreResults,
-                "defaultVectorStore", vectorStoreFactory.getDefaultStoreType()
-            );
-            
-            return results;
-        } catch (Exception e) {
-            log.error("测试连接失败: {}", e.getMessage(), e);
-            return Map.of("error", e.getMessage());
-        }
-    }
-    
-    /**
-     * 获取所有可用的向量模型类型
-     */
-    public List<String> getAvailableEmbeddingModelTypes() {
-        return embeddingModelFactory.getAllEmbeddingModelTypes();
-    }
-    
-    /**
-     * 获取所有可用的向量存储类型
-     */
-    public List<String> getAvailableVectorStoreTypes() {
-        return vectorStoreFactory.getAllVectorStoreTypes();
+    class VectorStatistics {
+        private String kbId;
+        private long totalDocuments;
+        private long totalChunks;
+        private long totalEmbeddings;
+        private String vectorModel;
+        private long lastUpdated;
+        
+        // Getters and Setters
+        public String getKbId() { return kbId; }
+        public void setKbId(String kbId) { this.kbId = kbId; }
+        
+        public long getTotalDocuments() { return totalDocuments; }
+        public void setTotalDocuments(long totalDocuments) { this.totalDocuments = totalDocuments; }
+        
+        public long getTotalChunks() { return totalChunks; }
+        public void setTotalChunks(long totalChunks) { this.totalChunks = totalChunks; }
+        
+        public long getTotalEmbeddings() { return totalEmbeddings; }
+        public void setTotalEmbeddings(long totalEmbeddings) { this.totalEmbeddings = totalEmbeddings; }
+        
+        public String getVectorModel() { return vectorModel; }
+        public void setVectorModel(String vectorModel) { this.vectorModel = vectorModel; }
+        
+        public long getLastUpdated() { return lastUpdated; }
+        public void setLastUpdated(long lastUpdated) { this.lastUpdated = lastUpdated; }
     }
 } 

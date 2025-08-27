@@ -148,9 +148,9 @@ watch(() => props.modelValue, (newVal) => {
   }
 }, { immediate: true })
 
-const handleFileChange = (file: any, fileList: any[]) => {
+const handleFileChange = (file: any, uploadedFileList: any[]) => {
   // 验证文件类型和大小
-  const validatedFiles = fileList.map(item => {
+  const validatedFiles = uploadedFileList.map(item => {
     const isValidType = supportedTypes.includes(item.type) || 
                        supportedExtensions.some(ext => item.name.toLowerCase().endsWith(ext))
     
@@ -168,8 +168,8 @@ const handleFileChange = (file: any, fileList: any[]) => {
   emit('update:modelValue', files)
 }
 
-const handleFileRemove = (file: any, fileList: any[]) => {
-  const files = fileList.map(item => item.raw).filter(Boolean)
+const handleFileRemove = (file: any, uploadedFileList: any[]) => {
+  const files = uploadedFileList.map(item => item.raw).filter(Boolean)
   emit('update:modelValue', files)
 }
 
@@ -220,24 +220,81 @@ const handleUpload = async () => {
   try {
     const validFiles = fileList.value.filter(file => file.status === 'ready')
     
-    // 这里可以调用实际的上传接口
-    // 模拟上传过程
-    for (let i = 0; i < validFiles.length; i++) {
-      const file = validFiles[i]
-      await new Promise(resolve => setTimeout(resolve, 500)) // 模拟上传延迟
+    // 读取文件内容并调用后端接口
+    const uploadPromises = validFiles.map(async (fileItem) => {
+      const file = fileItem.raw
+      if (!file) return
       
-      // 模拟上传进度
-      ElMessage.success(`文件 ${file.name} 上传成功`)
+      try {
+        // 读取文件内容
+        const content = await readFileContent(file)
+        
+        // 构建文档数据
+        const documentData = {
+          title: file.name,
+          content: content,
+          type: file.name.split('.').pop() || 'text',
+          size: file.size
+        }
+        
+        // 触发上传事件，让父组件处理具体的API调用
+        emit('upload-success', { 
+          file: file,
+          documentData: documentData,
+          success: true 
+        })
+        
+        return { file, success: true }
+      } catch (error) {
+        console.error(`文件 ${file.name} 处理失败:`, error)
+        emit('upload-error', { file, error })
+        return { file, success: false, error }
+      }
+    })
+    
+    const results = await Promise.all(uploadPromises)
+    const successCount = results.filter(r => r?.success).length
+    const failCount = results.length - successCount
+    
+    if (successCount > 0) {
+      ElMessage.success(`成功处理 ${successCount} 个文件，正在上传到后端进行向量化...`)
+    }
+    if (failCount > 0) {
+      ElMessage.warning(`${failCount} 个文件处理失败`)
     }
     
-    emit('upload-success', { files: validFiles })
-    ElMessage.success(`成功上传 ${validFiles.length} 个文件`)
   } catch (error) {
     emit('upload-error', error)
     ElMessage.error('上传失败')
   } finally {
     uploading.value = false
   }
+}
+
+// 读取文件内容的辅助函数
+const readFileContent = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    
+    // 根据文件类型选择读取方式
+    if (file.type === 'application/pdf' || 
+        file.name.toLowerCase().endsWith('.pdf')) {
+      // PDF文件暂时返回文件名，因为需要特殊处理
+      resolve(`PDF文件: ${file.name}\n\n注意：PDF文件内容提取功能需要后端支持`)
+    } else if (file.type.includes('word') || 
+               file.type.includes('excel') ||
+               file.name.toLowerCase().match(/\.(doc|docx|xls|xlsx)$/)) {
+      // Office文档暂时返回文件名
+      resolve(`Office文档: ${file.name}\n\n注意：Office文档内容提取功能需要后端支持`)
+    } else {
+      // 文本文件直接读取内容
+      reader.onload = (e) => {
+        resolve(e.target?.result as string)
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    }
+  })
 }
 
 const clearFiles = () => {

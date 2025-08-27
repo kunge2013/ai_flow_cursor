@@ -8,6 +8,8 @@ import com.aiflow.server.exception.NotFoundException;
 import com.aiflow.server.mapper.KnowledgeBaseMapper;
 import com.aiflow.server.mapper.VectorDocumentMapper;
 import com.aiflow.server.service.VectorSearchService;
+import com.aiflow.server.service.LangChainRagService;
+import com.aiflow.server.service.LangChainRagService.DocumentProcessResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -33,6 +36,7 @@ public class KbService {
     private final KnowledgeBaseMapper knowledgeBaseMapper;
     private final VectorDocumentMapper vectorDocumentMapper;
     private final VectorSearchService vectorSearchService;
+    private final LangChainRagService langChainRagService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public KnowledgeBasePageResponse list(KnowledgeBaseQueryRequest req) {
@@ -169,44 +173,111 @@ public class KbService {
             throw new NotFoundException("KB not found: " + kbId);
         }
 
-        // 获取知识库信息以确定向量模型
-        KnowledgeBase kb = knowledgeBaseMapper.selectById(kbId);
-        String vectorModel = kb.getVectorModel() != null ? kb.getVectorModel() : "zhipu";
-
-        VectorDocument doc = new VectorDocument();
-        doc.setId(IdService.newId());
-        doc.setKbId(kbId);
-        doc.setTitle(req.title);
-        doc.setContent(req.content);
-        doc.setContentType(req.type != null ? req.type : "text");
-        doc.setFileSize(req.size != null ? req.size : req.content.length());
-        doc.setVectorModel(vectorModel);
-        doc.setStatus("processing"); // 设置为处理中状态
-        doc.setCreatedAt(LocalDateTime.now());
-        doc.setUpdatedAt(doc.getCreatedAt());
-        
-        // 保存到数据库
-        vectorDocumentMapper.insert(doc);
-        
-        // 异步进行向量化处理
         try {
-            // 调用向量化服务
-            vectorSearchService.saveDocumentVector(doc.getId(), kbId, req.content, vectorModel);
+            log.info("开始使用LangChain4j RAG处理文档: {}", req.title);
             
-            // 更新状态为完成
-            doc.setStatus("completed");
-            doc.setUpdatedAt(LocalDateTime.now());
-            vectorDocumentMapper.updateById(doc);
+            // 使用LangChain4j RAG服务处理文档
+            DocumentProcessResult result = langChainRagService.processDocumentContent(
+                    kbId, req.title, req.content, req.type != null ? req.type : "text");
             
-            log.info("文档向量化完成: {}", doc.getId());
+            if ("success".equals(result.getStatus())) {
+                log.info("文档RAG处理成功: {}, 生成了 {} 个chunks", req.title, result.getTotalChunks());
+                
+                // 查找保存的文档
+                VectorDocument doc = vectorDocumentMapper.selectById(result.getDocumentId());
+                if (doc != null) {
+                    return convertToDocumentInfo(doc);
+                } else {
+                    throw new RuntimeException("文档保存后未找到");
+                }
+            } else {
+                throw new RuntimeException("文档RAG处理失败: " + result.getMessage());
+            }
+            
         } catch (Exception e) {
-            log.error("文档向量化失败: {}", doc.getId(), e);
-            doc.setStatus("failed");
-            doc.setUpdatedAt(LocalDateTime.now());
-            vectorDocumentMapper.updateById(doc);
+            log.error("文档RAG处理失败: {}", req.title, e);
+            throw new RuntimeException("文档处理失败: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public DocumentInfo uploadDocument(String kbId, MultipartFile file) {
+        if (knowledgeBaseMapper.selectById(kbId) == null) {
+            throw new NotFoundException("KB not found: " + kbId);
+        }
+
+        try {
+            log.info("开始使用LangChain4j RAG处理文件上传: {}", file.getOriginalFilename());
+            
+            // 使用LangChain4j RAG服务处理文件
+            DocumentProcessResult result = langChainRagService.processDocument(kbId, file);
+            
+            if ("success".equals(result.getStatus())) {
+                log.info("文件RAG处理成功: {}, 生成了 {} 个chunks", file.getOriginalFilename(), result.getTotalChunks());
+                
+                // 查找保存的文档
+                VectorDocument doc = vectorDocumentMapper.selectById(result.getDocumentId());
+                if (doc != null) {
+                    return convertToDocumentInfo(doc);
+                } else {
+                    throw new RuntimeException("文档保存后未找到");
+                }
+            } else {
+                throw new RuntimeException("文件RAG处理失败: " + result.getMessage());
+            }
+            
+        } catch (Exception e) {
+            log.error("文件RAG处理失败: {}", file.getOriginalFilename(), e);
+            throw new RuntimeException("文件处理失败: " + e.getMessage());
+        }
+    }
+
+    // 读取文件内容的辅助方法
+    private String readFileContent(MultipartFile file) throws Exception {
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new RuntimeException("文件名不能为空");
         }
         
-        return convertToDocumentInfo(doc);
+        String extension = getFileExtension(fileName);
+        
+        // 根据文件类型选择读取方式
+        if ("pdf".equalsIgnoreCase(extension)) {
+            // PDF文件暂时返回文件名，因为需要特殊处理
+            return String.format("PDF文件: %s\n\n注意：PDF文件内容提取功能需要集成PDF解析库", fileName);
+        } else if ("doc".equalsIgnoreCase(extension) || "docx".equalsIgnoreCase(extension) ||
+                   "xls".equalsIgnoreCase(extension) || "xlsx".equalsIgnoreCase(extension)) {
+            // Office文档暂时返回文件名
+            return String.format("Office文档: %s\n\n注意：Office文档内容提取功能需要集成文档解析库", fileName);
+        } else {
+            // 文本文件直接读取内容
+            return new String(file.getBytes(), "UTF-8");
+        }
+    }
+
+    // 获取文件扩展名
+    private String getFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            return fileName.substring(lastDotIndex + 1);
+        }
+        return "";
+    }
+
+    // 获取文件类型
+    private String getFileType(String fileName) {
+        String extension = getFileExtension(fileName);
+        if ("pdf".equalsIgnoreCase(extension)) {
+            return "pdf";
+        } else if ("doc".equalsIgnoreCase(extension) || "docx".equalsIgnoreCase(extension)) {
+            return "word";
+        } else if ("xls".equalsIgnoreCase(extension) || "xlsx".equalsIgnoreCase(extension)) {
+            return "excel";
+        } else if ("txt".equalsIgnoreCase(extension) || "md".equalsIgnoreCase(extension)) {
+            return "text";
+        } else {
+            return "unknown";
+        }
     }
 
     @Transactional

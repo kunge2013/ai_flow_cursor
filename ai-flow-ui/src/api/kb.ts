@@ -95,6 +95,19 @@ export function addDocument(kbId: string, body: DocumentUploadRequest) {
   return request<DocumentInfo>(`${BASE}/${kbId}/documents`, { method: 'POST', body })
 }
 
+export function uploadDocument(kbId: string, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  return request<DocumentInfo>(`${BASE}/${kbId}/documents/upload`, { 
+    method: 'POST', 
+    body: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function deleteDocument(kbId: string, documentId: string) {
   return request<void>(`${BASE}/${kbId}/documents/${documentId}`, { method: 'DELETE' })
 }

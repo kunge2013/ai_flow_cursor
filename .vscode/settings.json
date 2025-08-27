@@ -6,5 +6,7 @@
         "name": "JavaSE-17",
         "path": "D:\\soft\\Java\\jdk17",
         "default": true
-    }]
+    }
+],
+"maven.view": "hierarchical"
 }

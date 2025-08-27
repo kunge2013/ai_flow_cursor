@@ -1,7 +1,11 @@
 package com.aiflow.server.controller;
 
 import com.aiflow.server.dto.KbDtos.*;
+import com.aiflow.server.dto.VectorSearchDtos.VectorSearchRequest;
+import com.aiflow.server.dto.VectorSearchDtos.VectorSearchResponse;
 import com.aiflow.server.service.KbService;
+import com.aiflow.server.service.LangChainRagService;
+import com.aiflow.server.service.LangChainRagService.RagStatistics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,6 +24,7 @@ import java.util.List;
 public class KbController {
 
     private final KbService kbService;
+    private final LangChainRagService langChainRagService;
 
     @GetMapping
     @Operation(summary = "查询知识库列表")
@@ -79,6 +85,32 @@ public class KbController {
             @Valid @RequestBody DocumentUploadRequest req
     ) {
         return kbService.addDocument(id, req);
+    }
+
+    @PostMapping("/{id}/documents/upload")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "上传文件到知识库并进行向量化")
+    public DocumentInfo uploadDocument(
+            @PathVariable("id") String id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return kbService.uploadDocument(id, file);
+    }
+
+    @GetMapping("/{id}/rag/statistics")
+    @Operation(summary = "获取知识库RAG统计信息")
+    public RagStatistics getRagStatistics(@PathVariable("id") String id) {
+        return langChainRagService.getRagStatistics(id);
+    }
+
+    @PostMapping("/{id}/rag/search")
+    @Operation(summary = "使用RAG进行相似度搜索")
+    public VectorSearchResponse ragSearch(
+            @PathVariable("id") String id,
+            @Valid @RequestBody VectorSearchRequest req
+    ) {
+        req.setKbId(id);
+        return langChainRagService.searchSimilar(req);
     }
 
     @DeleteMapping("/{id}/documents/{documentId}")
