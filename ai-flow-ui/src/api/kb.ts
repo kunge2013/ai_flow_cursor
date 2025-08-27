@@ -101,10 +101,8 @@ export function uploadDocument(kbId: string, file: File) {
   
   return request<DocumentInfo>(`${BASE}/${kbId}/documents/upload`, { 
     method: 'POST', 
-    body: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    body: formData
+    // 移除手动设置的 Content-Type 头，让浏览器自动处理 multipart boundary
   })
 }
 

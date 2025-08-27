@@ -93,6 +93,13 @@
             <version>${langchain4j.version}</version>
         </dependency>
         
+        <!-- LangChain4j All-MiniLM-L6-v2 Embeddings -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-embeddings-all-minilm-l6-v2</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        
         <!-- Jackson for JSON processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

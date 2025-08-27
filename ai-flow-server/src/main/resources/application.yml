@@ -6,11 +6,19 @@ spring:
     name: ai-flow-server
   profiles:
     active: vector
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB        # 单个文件最大大小
+      max-request-size: 200MB     # 总请求最大大小
+      file-size-threshold: 2KB    # 文件大小阈值，超过此值将写入磁盘
+      location: /tmp              # 临时文件存储位置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/ai_flow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3307/ai_flow?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: 123456
     druid:
       initial-size: 5
       min-idle: 5
@@ -61,11 +69,17 @@ ai:
       api-key: ${QIANFAN_API_KEY:your-qianfan-api-key}
       embedding-model: text-embedding-v1
       base-url: https://aip.baidubce.com
+    
+    # All-MiniLM-L6-v2配置（默认本地嵌入模型）
+    sentence-transformers:
+      enable: true
+      default-model: all-minilm-l6-v2
+      model-path: ${SENTENCE_TRANSFORMERS_MODEL_PATH:}
 
 # 向量数据库配置
 vector:
   # 默认向量模型
-  default-model: zhipu
+  default-model: sentence-transformers
   
   # 向量存储配置
   storage:

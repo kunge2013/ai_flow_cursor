@@ -9,6 +9,7 @@ import com.aiflow.server.mapper.KnowledgeBaseMapper;
 import com.aiflow.server.mapper.VectorDocumentMapper;
 import com.aiflow.server.service.LangChainRagService;
 import com.aiflow.server.service.IdService;
+import com.aiflow.aimodel.factory.EmbeddingModelFactory;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
@@ -46,6 +47,7 @@ public class LangChainRagServiceImpl implements LangChainRagService {
 
     private final KnowledgeBaseMapper knowledgeBaseMapper;
     private final VectorDocumentMapper vectorDocumentMapper;
+    private final EmbeddingModelFactory embeddingModelFactory;
     private final ExecutorService executorService;
     private final Tika tika;
     
@@ -65,9 +67,11 @@ public class LangChainRagServiceImpl implements LangChainRagService {
     private String milvusCollection;
 
     public LangChainRagServiceImpl(KnowledgeBaseMapper knowledgeBaseMapper, 
-                                   VectorDocumentMapper vectorDocumentMapper) {
+                                   VectorDocumentMapper vectorDocumentMapper,
+                                   EmbeddingModelFactory embeddingModelFactory) {
         this.knowledgeBaseMapper = knowledgeBaseMapper;
         this.vectorDocumentMapper = vectorDocumentMapper;
+        this.embeddingModelFactory = embeddingModelFactory;
         this.executorService = Executors.newFixedThreadPool(4);
         this.tika = new Tika();
     }
@@ -322,12 +326,30 @@ public class LangChainRagServiceImpl implements LangChainRagService {
      * 创建向量存储
      */
     private EmbeddingStore<TextSegment> createEmbeddingStore(String kbId) {
-        String collectionName = milvusCollection + "_" + kbId;
+        // 根据知识库的向量模型确定维度和集合名称
+        KnowledgeBase kb = knowledgeBaseMapper.selectById(kbId);
+        String vectorModel = kb != null && kb.getVectorModel() != null ? kb.getVectorModel() : "sentence-transformers";
+        
+        int dimension;
+        String modelSuffix;
+        if ("openai".equals(vectorModel)) {
+            dimension = 1536; // OpenAI text-embedding-ada-002 维度
+            modelSuffix = "openai";
+        } else {
+            dimension = 384; // All-MiniLM-L6-v2 维度
+            modelSuffix = "minilm";
+        }
+        
+        // 在集合名称中包含模型类型，避免维度冲突
+        String collectionName = milvusCollection + "_" + kbId + "_" + modelSuffix;
+        
+        log.info("创建向量存储: 集合={}, 模型={}, 维度={}", collectionName, vectorModel, dimension);
+        
         return MilvusEmbeddingStore.builder()
                 .host(milvusHost)
                 .port(milvusPort)
                 .collectionName(collectionName)
-                .dimension(1536) // OpenAI embedding维度
+                .dimension(dimension)
                 .build();
     }
 
@@ -336,7 +358,7 @@ public class LangChainRagServiceImpl implements LangChainRagService {
      */
     private EmbeddingModel createEmbeddingModel(String kbId) {
         KnowledgeBase kb = knowledgeBaseMapper.selectById(kbId);
-        String vectorModel = kb != null && kb.getVectorModel() != null ? kb.getVectorModel() : "openai";
+        String vectorModel = kb != null && kb.getVectorModel() != null ? kb.getVectorModel() : "sentence-transformers";
         
         if ("openai".equals(vectorModel) && openaiApiKey != null && !openaiApiKey.isEmpty()) {
             return OpenAiEmbeddingModel.builder()
@@ -344,8 +366,15 @@ public class LangChainRagServiceImpl implements LangChainRagService {
                     .modelName(openaiEmbeddingModel)
                     .build();
         } else {
-            // 使用默认的模拟模型
-            return new MockEmbeddingModel();
+            // 使用ai-flow-model模块中的EmbeddingModelFactory获取模型
+            try {
+                com.aiflow.aimodel.embedding.EmbeddingModel aiFlowModel = 
+                    embeddingModelFactory.getEmbeddingModel("sentence-transformers", "all-minilm-l6-v2");
+                return new EmbeddingModelAdapter(aiFlowModel);
+            } catch (Exception e) {
+                log.warn("无法获取All-MiniLM-L6-v2模型，使用模拟模型: {}", e.getMessage());
+                return new MockEmbeddingModel();
+            }
         }
     }
 
@@ -380,9 +409,9 @@ public class LangChainRagServiceImpl implements LangChainRagService {
     private static class MockEmbeddingModel implements EmbeddingModel {
         @Override
         public Response<Embedding> embed(String text) {
-            // 生成随机向量用于测试
+            // 生成随机向量用于测试，使用All-MiniLM-L6-v2的维度384
             List<Float> values = new ArrayList<>();
-            for (int i = 0; i < 1536; i++) {
+            for (int i = 0; i < 384; i++) {
                 values.add((float) (Math.random() - 0.5));
             }
             return Response.from(Embedding.from(values));

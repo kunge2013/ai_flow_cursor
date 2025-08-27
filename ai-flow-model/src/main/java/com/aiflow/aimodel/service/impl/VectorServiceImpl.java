@@ -1,9 +1,6 @@
 package com.aiflow.aimodel.service.impl;
 
 import com.aiflow.aimodel.service.VectorService;
-import com.aiflow.aimodel.service.VectorService.VectorEmbeddingResult;
-import com.aiflow.aimodel.service.VectorService.VectorSearchResult;
-import com.aiflow.aimodel.service.VectorService.VectorStatistics;
 import com.aiflow.aimodel.embedding.EmbeddingModel;
 import com.aiflow.aimodel.vectorstore.VectorStore;
 import com.aiflow.aimodel.factory.EmbeddingModelFactory;
@@ -159,7 +156,23 @@ public class VectorServiceImpl implements VectorService {
             
             // 2. 保存到向量存储
             VectorStore vectorStore = vectorStoreFactory.getVectorStore(kbId);
-            // 这里需要根据实际的VectorStore接口实现
+            
+            // 3. 创建文本段落并添加元数据
+            TextSegment textSegment = TextSegment.from(content);
+            textSegment.metadata().add("documentId", documentId);
+            textSegment.metadata().add("kbId", kbId);
+            textSegment.metadata().add("title", "Document_" + documentId);
+            textSegment.metadata().add("timestamp", System.currentTimeMillis());
+            
+            // 4. 将向量转换为Float列表（LangChain4j需要Float类型）
+            List<Float> floatEmbedding = embedding.getEmbedding().stream()
+                    .map(Double::floatValue)
+                    .collect(Collectors.toList());
+            
+            // 5. 保存到向量存储
+            vectorStore.add(documentId, 
+                    dev.langchain4j.data.embedding.Embedding.from(floatEmbedding));
+            
             log.info("文档向量保存成功，文档ID: {}", documentId);
             
         } catch (Exception e) {
