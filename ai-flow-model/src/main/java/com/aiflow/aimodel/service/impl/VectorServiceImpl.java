@@ -82,8 +82,8 @@ public class VectorServiceImpl implements VectorService {
             log.info("开始向量相似度搜索，查询: {}, 知识库: {}, topK: {}, 阈值: {}", 
                     query, kbId, topK, scoreThreshold);
             
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getVectorStore(kbId);
+            // 获取向量存储 - 使用默认的 milvus 存储类型
+            VectorStore vectorStore = vectorStoreFactory.getVectorStore("milvus");
             
             // 获取嵌入模型
             String vectorModel = getVectorModelByKbId(kbId);
@@ -154,8 +154,8 @@ public class VectorServiceImpl implements VectorService {
             VectorEmbeddingResult embedding = embedDocument(content, vectorModel);
             embedding.setDocumentId(documentId);
             
-            // 2. 保存到向量存储
-            VectorStore vectorStore = vectorStoreFactory.getVectorStore(kbId);
+            // 2. 保存到向量存储 - 使用默认的 milvus 存储类型
+            VectorStore vectorStore = vectorStoreFactory.getVectorStore("milvus");
             
             // 3. 创建文本段落并添加元数据
             TextSegment textSegment = TextSegment.from(content);
@@ -227,8 +227,8 @@ public class VectorServiceImpl implements VectorService {
             VectorStatistics stats = new VectorStatistics();
             stats.setKbId(kbId);
             
-            // 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getVectorStore(kbId);
+            // 获取向量存储 - 使用默认的 milvus 存储类型
+            VectorStore vectorStore = vectorStoreFactory.getVectorStore("milvus");
             
             // 获取统计信息
             stats.setTotalDocuments(vectorStore.getCollectionSize(kbId));

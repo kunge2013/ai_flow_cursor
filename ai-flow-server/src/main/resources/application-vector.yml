@@ -23,11 +23,11 @@ ai:
 # 向量数据库配置
 vector:
   # 默认向量模型
-  default-model: zhipu
+  default-model: sentence-transformers
   
   # 向量存储配置
   storage:
-    type: memory  # memory, milvus, pinecone, weaviate
+    type: milvus  # memory, milvus, pinecone, weaviate
     milvus:
       host: localhost
       port: 19530
@@ -38,4 +38,10 @@ vector:
       index: ai-flow-vectors
     weaviate:
       url: http://localhost:8080
-      class-name: AIDocument 
+      class-name: AIDocument
+
+# Milvus 配置（兼容代码中的 @Value 注解）
+milvus:
+  host: localhost
+  port: 19530
+  collection: ai_flow_documents 

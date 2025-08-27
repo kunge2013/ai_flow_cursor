@@ -164,8 +164,8 @@ public class RagServiceImpl implements RagService {
         try {
             log.info("开始RAG处理: {}", title);
             
-            // 1. 获取向量存储
-            VectorStore vectorStore = vectorStoreFactory.getVectorStore(kbId);
+            // 1. 获取向量存储 - 使用默认的 milvus 存储类型
+            VectorStore vectorStore = vectorStoreFactory.getVectorStore("milvus");
             
             // 2. 获取嵌入模型
             String vectorModel = getVectorModelByKbId(kbId);
