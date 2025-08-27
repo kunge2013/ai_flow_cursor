@@ -37,4 +37,31 @@
         AND deleted = 0
     </update>
 
+    <!-- 根据知识库ID和标题查询文档 -->
+    <select id="selectByKbIdAndTitle" resultMap="BaseResultMap">
+        SELECT *
+        FROM t_vector_document
+        WHERE kb_id = #{kbId}
+        AND title = #{title}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 根据知识库ID统计文档数量 -->
+    <select id="countByKbId" resultType="long">
+        SELECT COUNT(*)
+        FROM t_vector_document
+        WHERE kb_id = #{kbId}
+        AND deleted = 0
+    </select>
+
+    <!-- 根据知识库ID和状态统计文档数量 -->
+    <select id="countByKbIdAndStatus" resultType="long">
+        SELECT COUNT(*)
+        FROM t_vector_document
+        WHERE kb_id = #{kbId}
+        AND status = #{status}
+        AND deleted = 0
+    </select>
+
 </mapper> 

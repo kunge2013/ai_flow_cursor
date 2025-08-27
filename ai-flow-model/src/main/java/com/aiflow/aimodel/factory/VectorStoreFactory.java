@@ -91,26 +91,6 @@ public class VectorStoreFactory {
     }
     
     /**
-     * 测试所有向量存储的连接
-     */
-    public Map<String, Boolean> testAllConnections() {
-        Map<String, Boolean> results = new ConcurrentHashMap<>();
-        
-        vectorStores.forEach((key, store) -> {
-            try {
-                boolean connected = store.testConnection();
-                results.put(key, connected);
-                log.info("向量存储 {} 连接测试: {}", key, connected ? "成功" : "失败");
-            } catch (Exception e) {
-                results.put(key, false);
-                log.error("向量存储 {} 连接测试异常: {}", key, e.getMessage());
-            }
-        });
-        
-        return results;
-    }
-    
-    /**
      * 获取默认存储类型
      */
     public String getDefaultStoreType() {

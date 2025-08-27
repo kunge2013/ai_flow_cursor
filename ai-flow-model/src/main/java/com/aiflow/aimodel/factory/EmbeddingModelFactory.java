@@ -48,7 +48,7 @@ public class EmbeddingModelFactory {
         
         // 如果没有找到，返回默认的OpenAI模型
         for (Map.Entry<String, EmbeddingModel> entry : embeddingModels.entrySet()) {
-            if (entry.getKey().startsWith("openai:")) {
+            if (entry.getKey().startsWith("sentence-transformers:all-minilm-l6-v2")) {
                 log.warn("未找到类型为 {} 的向量模型，使用默认的OpenAI模型", modelType);
                 return entry.getValue();
             }

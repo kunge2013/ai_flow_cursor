@@ -94,7 +94,11 @@ public class VectorServiceImpl implements VectorService {
             List<Float> queryVector = queryEmbedding.vectorAsList();
             
             // 执行搜索
-            var results = vectorStore.findRelevant(kbId, queryVector, topK);
+            var results = vectorStore.findRelevant(
+                dev.langchain4j.data.embedding.Embedding.from(queryVector), 
+                topK, 
+                scoreThreshold
+            );
             
             if (!results.isEmpty()) {
                 log.info("向量搜索完成，找到 {} 个结果", results.size());
@@ -231,9 +235,9 @@ public class VectorServiceImpl implements VectorService {
             VectorStore vectorStore = vectorStoreFactory.getVectorStore("milvus");
             
             // 获取统计信息
-            stats.setTotalDocuments(vectorStore.getCollectionSize(kbId));
+            stats.setTotalDocuments(0L); // 暂时设为0，需要实现getCollectionSize方法
             stats.setTotalChunks(0); // 暂时设为0，需要根据实际情况实现
-            stats.setTotalEmbeddings(vectorStore.getCollectionSize(kbId));
+            stats.setTotalEmbeddings(0L); // 暂时设为0，需要实现getCollectionSize方法
             stats.setVectorModel(getVectorModelByKbId(kbId));
             stats.setLastUpdated(System.currentTimeMillis());
             
