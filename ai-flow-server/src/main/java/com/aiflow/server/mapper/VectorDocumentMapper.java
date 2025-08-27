@@ -28,4 +28,30 @@ public interface VectorDocumentMapper extends BaseMapper<VectorDocument> {
      * @return 删除的记录数
      */
     int deleteByKbId(@Param("kbId") String kbId);
+
+    /**
+     * 根据知识库ID统计文档数量
+     *
+     * @param kbId 知识库ID
+     * @return 文档数量
+     */
+    Long countByKbId(@Param("kbId") String kbId);
+
+    /**
+     * 根据知识库ID和状态统计文档数量
+     *
+     * @param kbId 知识库ID
+     * @param status 状态
+     * @return 文档数量
+     */
+    Long countByKbIdAndStatus(@Param("kbId") String kbId, @Param("status") String status);
+
+    /**
+     * 根据知识库ID和标题查询文档
+     *
+     * @param kbId 知识库ID
+     * @param title 标题
+     * @return 文档
+     */
+    VectorDocument selectByKbIdAndTitle(@Param("kbId") String kbId, @Param("title") String title);
 } 

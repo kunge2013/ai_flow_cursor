@@ -33,7 +33,7 @@ public interface EmbeddingModel {
     /**
      * 批量将文本转换为向量
      */
-    List<Embedding> embedAll(List<String> texts);
+    List<Embedding> embedAllTexts(List<String> texts);
     
     /**
      * 将文本段落转换为向量
@@ -43,7 +43,7 @@ public interface EmbeddingModel {
     /**
      * 批量将文本段落转换为向量
      */
-    List<Embedding> embedAll(List<TextSegment> textSegments);
+    List<Embedding> embedAllSegments(List<TextSegment> textSegments);
     
     /**
      * 测试模型连接

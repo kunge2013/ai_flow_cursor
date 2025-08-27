@@ -17,12 +17,28 @@
     
     <properties>
         <java.version>17</java.version>
-        <langchain4j.version>0.27.1</langchain4j.version>
         <spring-boot.version>3.1.5</spring-boot.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.jupiter.version>5.10.2</junit.jupiter.version>
+        <langchain4j.version>0.24.0</langchain4j.version>
     </properties>
+    
+    <repositories>
+        <!-- Maven中央仓库 -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+        <!-- LangChain4j专用仓库 -->
+        <repository>
+            <id>langchain4j</id>
+            <name>LangChain4j Repository</name>
+            <url>https://s01.oss.sonatype.org/content/repositories/releases/</url>
+        </repository>
+    </repositories>
     
     <dependencyManagement>
         <dependencies>
@@ -41,6 +57,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        
+        <!-- Spring Boot Web Starter for HTTP client -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         
         <!-- Spring Boot Configuration Processor -->
@@ -64,77 +86,12 @@
             <version>${langchain4j.version}</version>
         </dependency>
         
-        <!-- 暂时注释掉可能有问题的依赖
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-anthropic</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-google-genai</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        -->
-        
-        <!-- LangChain4j Ollama -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-ollama</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
-        <!-- LangChain4j 智普AI - 暂时注释掉，因为依赖不可用
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-zhipu-ai</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        -->
-        
-        <!-- LangChain4j 千帆 -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-qianfan</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
         <!-- LangChain4j Milvus -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-milvus</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
-        
-        <!-- LangChain4j Chroma -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-chroma</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
-        <!-- LangChain4j Pinecone -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-pinecone</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
-        <!-- LangChain4j Weaviate -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-weaviate</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        
-        <!-- 暂时注释掉可能有问题的依赖
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-hugging-face</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
-        -->
         
         <!-- Jackson for JSON processing -->
         <dependency>
@@ -181,6 +138,23 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

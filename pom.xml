@@ -19,10 +19,64 @@
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
     </properties>
     
-      <modules>
-    <module>ai-flow-server</module>
-    <module>ai-flow-model</module>
-  </modules>
+    <repositories>
+        <!-- Maven中央仓库 - 优先 -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <!-- LangChain4j专用仓库 -->
+        <repository>
+            <id>langchain4j</id>
+            <name>LangChain4j Repository</name>
+            <url>https://s01.oss.sonatype.org/content/repositories/releases/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <!-- 阿里云Maven仓库作为备用 -->
+        <repository>
+            <id>aliyunmaven</id>
+            <name>Aliyun Maven</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    
+    <pluginRepositories>
+        <!-- Maven中央插件仓库 -->
+        <pluginRepository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+    
+    <modules>
+        <module>ai-flow-server</module>
+        <module>ai-flow-model</module>
+    </modules>
     
     <dependencyManagement>
         <dependencies>

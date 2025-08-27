@@ -1,6 +1,5 @@
 -- 向量存储相关表结构
 
-drop TABLE t_knowledge_base;
 -- 知识库表
 CREATE TABLE IF NOT EXISTS t_knowledge_base (
     id VARCHAR(128) PRIMARY KEY,
@@ -18,7 +17,7 @@ CREATE TABLE IF NOT EXISTS t_knowledge_base (
 -- 向量文档表
 CREATE TABLE IF NOT EXISTS t_vector_document (
     id VARCHAR(128) PRIMARY KEY,
-    kb_id VARCHAR(32) NOT NULL COMMENT '知识库ID',
+    kb_id VARCHAR(128) NOT NULL COMMENT '知识库ID',
     title VARCHAR(200) NOT NULL COMMENT '文档标题',
     content LONGTEXT NOT NULL COMMENT '文档内容',
     content_type VARCHAR(50) COMMENT '内容类型',
@@ -39,8 +38,8 @@ CREATE TABLE IF NOT EXISTS t_vector_document (
 -- 向量索引表（用于快速检索）
 CREATE TABLE IF NOT EXISTS t_vector_index (
     id VARCHAR(128) PRIMARY KEY,
-    document_id VARCHAR(32) NOT NULL COMMENT '文档ID',
-    kb_id VARCHAR(32) NOT NULL COMMENT '知识库ID',
+    document_id VARCHAR(128) NOT NULL COMMENT '文档ID',
+    kb_id VARCHAR(128) NOT NULL COMMENT '知识库ID',
     vector_model VARCHAR(50) NOT NULL COMMENT '向量模型',
     embedding_vector LONGTEXT NOT NULL COMMENT '向量数据',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

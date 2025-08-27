@@ -1,0 +1,45 @@
+# LangChain4j RAG配置
+ai:
+  model:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      embedding-model: text-embedding-ada-002
+      chat-model: gpt-3.5-turbo
+    zhipu-ai:
+      api-key: ${ZHIPU_API_KEY:}
+      embedding-model: text-embedding-v2
+      chat-model: glm-4
+
+# Milvus向量数据库配置
+milvus:
+  host: ${MILVUS_HOST:localhost}
+  port: ${MILVUS_PORT:19530}
+  collection: ai_flow_documents
+  username: ${MILVUS_USERNAME:}
+  password: ${MILVUS_PASSWORD:}
+
+# LangChain4j配置
+langchain4j:
+  # 文档处理配置
+  document:
+    chunk-size: 1000
+    chunk-overlap: 200
+    max-chunks: 100
+  
+  # 向量化配置
+  embedding:
+    batch-size: 10
+    timeout: 30000
+  
+  # 缓存配置
+  cache:
+    enabled: true
+    max-size: 1000
+    ttl: 3600
+
+# 日志配置
+logging:
+  level:
+    dev.langchain4j: DEBUG
+    com.aiflow.server.service.LangChainRagService: DEBUG
+    com.aiflow.server.service.impl.LangChainRagServiceImpl: DEBUG

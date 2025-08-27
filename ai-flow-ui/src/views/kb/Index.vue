@@ -298,6 +298,7 @@
     <el-dialog v-model="uploadDialogVisible" title="文件上传" width="600px">
       <FileUpload
         v-model="fileList"
+        :use-direct-upload="true"
         @upload-success="handleFileUploadSuccess"
         @upload-error="handleFileUploadError"
       />
@@ -367,7 +368,8 @@ import {
   type KnowledgeBaseUpsertRequest,
   type DocumentInfo,
   type DocumentUploadRequest,
-  type TestQueryRequest
+  type TestQueryRequest,
+  uploadDocument
 } from '../../api/kb'
 import { 
   searchSimilar,
@@ -721,7 +723,8 @@ const showManualInputDialog = () => {
 
 // 显示文档库对话框
 const showDocLibraryDialog = () => {
-  ElMessage.info('文档库上传功能开发中')
+  docLibraryDialogVisible.value = true
+  docLibraryFiles.value = []
 }
 
 // 处理文件变化
@@ -772,13 +775,43 @@ const handleUpload = async () => {
 }
 
 // 文件上传成功处理
-const handleFileUploadSuccess = (response: any) => {
+const handleFileUploadSuccess = async (response: any) => {
+  if (!currentKb.value) {
+    ElMessage.error('请先选择知识库')
+    return
+  }
+  
+  try {
+    if (response.uploadMode === 'file') {
+      // 文件直接上传模式
+      ElMessage.info(`正在上传文件 ${response.file.name} 到知识库...`)
+      
+      // 调用新的文件上传API
+      await uploadDocument(currentKb.value.id, response.file)
+      
+      ElMessage.success(`文件 ${response.file.name} 上传成功，正在后台进行向量化处理`)
+    } else if (response.documentData) {
+      // 文档内容上传模式
+      ElMessage.info(`正在上传文件 ${response.file.name} 到知识库并进行向量化...`)
+      
+      // 调用原有的文档上传API
+      await addDocument(currentKb.value.id, response.documentData)
+      
+      ElMessage.success(`文件 ${response.file.name} 上传成功，正在后台进行向量化处理`)
+    } else {
+      // 兼容旧的格式
   ElMessage.success('文件上传成功')
+    }
+    
+    // 刷新文档列表
+    await getDocumentList()
+    
+    // 关闭对话框并清空文件列表
   uploadDialogVisible.value = false
   fileList.value = []
-  // 刷新文档列表
-  if (currentKb.value) {
-    getDocumentList()
+  } catch (error: any) {
+    console.error('文档上传失败:', error)
+    ElMessage.error(`文档上传失败: ${error.message || '未知错误'}`)
   }
 }
 
@@ -932,13 +965,35 @@ const handleDeleteDocument = async (doc: DocumentInfo) => {
 }
 
 // 文档库上传成功处理
-const handleDocLibraryUploadSuccess = (response: any) => {
+const handleDocLibraryUploadSuccess = async (response: any) => {
+  if (!currentKb.value) {
+    ElMessage.error('请先选择知识库')
+    return
+  }
+  
+  try {
+    // 如果response包含documentData，说明是新的上传方式
+    if (response.documentData) {
+      ElMessage.info(`正在上传文件 ${response.file.name} 到知识库并进行向量化...`)
+      
+      // 调用后端API上传文档
+      await addDocument(currentKb.value.id, response.documentData)
+      
+      ElMessage.success(`文件 ${response.file.name} 上传成功，正在后台进行向量化处理`)
+      
+      // 刷新文档列表
+      await getDocumentList()
+    } else {
+      // 兼容旧的格式
   ElMessage.success('文档库上传成功')
+    }
+    
+    // 关闭对话框并清空文件列表
   docLibraryDialogVisible.value = false
   docLibraryFiles.value = []
-  // 刷新文档列表
-  if (currentKb.value) {
-    getDocumentList()
+  } catch (error: any) {
+    console.error('文档库上传失败:', error)
+    ElMessage.error(`文档库上传失败: ${error.message || '未知错误'}`)
   }
 }
 

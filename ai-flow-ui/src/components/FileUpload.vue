@@ -1,5 +1,17 @@
 <template>
   <div class="file-upload">
+    <!-- 上传方式选择 -->
+    <div class="upload-mode-selector" v-if="props.useDirectUpload !== undefined">
+      <el-radio-group v-model="uploadMode" size="small">
+        <el-radio-button label="content">文档内容上传</el-radio-button>
+        <el-radio-button label="file">文件直接上传</el-radio-button>
+      </el-radio-group>
+      <div class="mode-description">
+        <span v-if="uploadMode === 'content'">将文件内容读取后上传到后端进行向量化</span>
+        <span v-else>直接将文件上传到后端，由后端处理内容提取和向量化</span>
+      </div>
+    </div>
+    
     <el-upload
       ref="uploadRef"
       class="upload-demo"
@@ -48,6 +60,7 @@ interface Props {
   tipText?: string
   uploadAction?: string
   maxSize?: number // MB
+  useDirectUpload?: boolean // 是否使用直接文件上传接口
 }
 
 interface Emits {
@@ -63,7 +76,8 @@ const props = withDefaults(defineProps<Props>(), {
   limit: 10,
   tipText: '支持 markdown, doc, docx, xlsx, xls, txt, pdf 等格式文件',
   uploadAction: '#',
-  maxSize: 50
+  maxSize: 50,
+  useDirectUpload: false
 })
 
 const emit = defineEmits<Emits>()
@@ -71,6 +85,7 @@ const emit = defineEmits<Emits>()
 const uploadRef = ref()
 const fileList = ref<any[]>([])
 const uploading = ref(false)
+const uploadMode = ref('content') // 默认使用文档内容上传模式
 
 const supportedTypes = [
   'text/plain',
@@ -141,24 +156,116 @@ const handleUpload = async () => {
   uploading.value = true
   
   try {
-    // 这里可以调用实际的上传接口
-    // 模拟上传过程
-    for (let i = 0; i < fileList.value.length; i++) {
-      const file = fileList.value[i]
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟上传延迟
+    if (uploadMode.value === 'file') {
+      // 文件直接上传模式
+      const uploadPromises = fileList.value.map(async (fileItem) => {
+        const file = fileItem.raw
+        if (!file) return
+        
+        try {
+          // 触发文件上传事件，让父组件处理
+          emit('upload-success', { 
+            file: file,
+            uploadMode: 'file',
+            success: true 
+          })
+          
+          return { file, success: true }
+        } catch (error) {
+          console.error(`文件 ${file.name} 处理失败:`, error)
+          emit('upload-error', { file, error })
+          return { file, success: false, error }
+        }
+      })
       
-      // 模拟上传进度
-      ElMessage.success(`文件 ${file.name} 上传成功`)
+      const results = await Promise.all(uploadPromises)
+      const successCount = results.filter(r => r?.success).length
+      const failCount = results.length - successCount
+      
+      if (successCount > 0) {
+        ElMessage.success(`成功处理 ${successCount} 个文件，正在上传到后端进行向量化...`)
+      }
+      if (failCount > 0) {
+        ElMessage.warning(`${failCount} 个文件处理失败`)
+      }
+    } else {
+      // 文档内容上传模式（原有逻辑）
+      const uploadPromises = fileList.value.map(async (fileItem) => {
+        const file = fileItem.raw
+        if (!file) return
+        
+        try {
+          // 读取文件内容
+          const content = await readFileContent(file)
+          
+          // 构建文档数据
+          const documentData = {
+            title: file.name,
+            content: content,
+            type: file.name.split('.').pop() || 'text',
+            size: file.size
+          }
+          
+          // 触发上传事件，让父组件处理具体的API调用
+          emit('upload-success', { 
+            file: file,
+            documentData: documentData,
+            uploadMode: 'content',
+            success: true 
+          })
+          
+          return { file, success: true }
+        } catch (error) {
+          console.error(`文件 ${file.name} 处理失败:`, error)
+          emit('upload-error', { file, error })
+          return { file, success: false, error }
+        }
+      })
+      
+      const results = await Promise.all(uploadPromises)
+      const successCount = results.filter(r => r?.success).length
+      const failCount = results.length - successCount
+      
+      if (successCount > 0) {
+        ElMessage.success(`成功处理 ${successCount} 个文件，正在上传到后端进行向量化...`)
+      }
+      if (failCount > 0) {
+        ElMessage.warning(`${failCount} 个文件处理失败`)
+      }
     }
     
-    emit('upload-success', { files: fileList.value })
-    ElMessage.success('所有文件上传完成')
   } catch (error) {
     emit('upload-error', error)
     ElMessage.error('上传失败')
   } finally {
     uploading.value = false
   }
+}
+
+// 读取文件内容的辅助函数
+const readFileContent = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    
+    // 根据文件类型选择读取方式
+    if (file.type === 'application/pdf' || 
+        file.name.toLowerCase().endsWith('.pdf')) {
+      // PDF文件暂时返回文件名，因为需要特殊处理
+      resolve(`PDF文件: ${file.name}\n\n注意：PDF文件内容提取功能需要后端支持`)
+    } else if (file.type.includes('word') || 
+               file.type.includes('excel') ||
+               file.name.toLowerCase().match(/\.(doc|docx|xls|xlsx)$/)) {
+      // Office文档暂时返回文件名
+      resolve(`Office文档: ${file.name}\n\n注意：Office文档内容提取功能需要后端支持`)
+    } else {
+      // 文本文件直接读取内容
+      reader.onload = (e) => {
+        resolve(e.target?.result as string)
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    }
+  })
 }
 
 const clearFiles = () => {
@@ -180,6 +287,21 @@ defineExpose({
 <style scoped>
 .file-upload {
   width: 100%;
+}
+
+.upload-mode-selector {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.mode-description {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
 }
 
 .upload-actions {

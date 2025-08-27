@@ -7,6 +7,7 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "ai.model.zhipu-ai", name = "enable", havingValue = "true")
 public class ZhipuAiEmbeddingModel implements EmbeddingModel {
     
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -66,8 +68,14 @@ public class ZhipuAiEmbeddingModel implements EmbeddingModel {
             // 调用智普AI API
             List<Double> embedding = callZhipuAiApi(text);
             
+            // 将 List<Double> 转换为 float[]
+            float[] floatArray = new float[embedding.size()];
+            for (int i = 0; i < embedding.size(); i++) {
+                floatArray[i] = embedding.get(i).floatValue();
+            }
+            
             // 创建Embedding对象
-            return new Embedding(embedding);
+            return Embedding.from(floatArray);
             
         } catch (Exception e) {
             log.error("智普AI向量化失败: {}", e.getMessage(), e);
@@ -76,7 +84,7 @@ public class ZhipuAiEmbeddingModel implements EmbeddingModel {
     }
     
     @Override
-    public List<Embedding> embedAll(List<String> texts) {
+    public List<Embedding> embedAllTexts(List<String> texts) {
         try {
             return texts.stream()
                     .map(this::embed)
@@ -93,11 +101,11 @@ public class ZhipuAiEmbeddingModel implements EmbeddingModel {
     }
     
     @Override
-    public List<Embedding> embedAll(List<TextSegment> textSegments) {
+    public List<Embedding> embedAllSegments(List<TextSegment> textSegments) {
         List<String> texts = textSegments.stream()
                 .map(TextSegment::text)
                 .collect(Collectors.toList());
-        return embedAll(texts);
+        return embedAllTexts(texts);
     }
     
     @Override

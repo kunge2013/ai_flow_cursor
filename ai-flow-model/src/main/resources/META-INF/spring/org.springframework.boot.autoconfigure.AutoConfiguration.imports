@@ -1,0 +1,2 @@
+com.aiflow.aimodel.config.AiModelAutoConfiguration
+com.aiflow.aimodel.config.VectorServiceAutoConfiguration
