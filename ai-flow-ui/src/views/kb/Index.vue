@@ -145,10 +145,54 @@
           />
         </el-form-item>
         <el-form-item label="向量模型" prop="vectorModel">
-          <el-select v-model="kbForm.vectorModel" placeholder="请选择向量模型" style="width: 100%">
-            <el-option label="OpenAI向量" value="openai" />
-            <el-option label="智普向量" value="zhipu" />
+          <div class="field-help">
+            <el-icon><InfoFilled /></el-icon>
+            <span>选择适合您文档类型的向量模型，不同模型在中文和英文处理上有不同优势</span>
+          </div>
+          <el-select v-model="kbForm.vectorModel" placeholder="请选择向量模型" style="width: 100%" @change="handleVectorModelChange">
+            <el-option 
+              label="All-MiniLM-L6-V2 (默认)" 
+              value="sentence-transformers"
+              :disabled="false"
+            >
+              <div class="model-option">
+                <div class="model-name">All-MiniLM-L6-V2 (默认)</div>
+                <div class="model-desc">本地模型，384维向量，支持中英文，免费使用</div>
+              </div>
+            </el-option>
+            <el-option 
+              label="智普向量模型" 
+              value="zhipu"
+              :disabled="!zhipuEnabled"
+            >
+              <div class="model-option">
+                <div class="model-name">智普向量模型</div>
+                <div class="model-desc">1024维向量，中文优化，需要API密钥</div>
+              </div>
+            </el-option>
+            <el-option 
+              label="OpenAI向量" 
+              value="openai"
+              :disabled="!openaiEnabled"
+            >
+              <div class="model-option">
+                <div class="model-name">OpenAI向量</div>
+                <div class="model-desc">1536维向量，英文优化，需要API密钥</div>
+              </div>
+            </el-option>
           </el-select>
+          <div class="model-tip">
+            <el-icon><InfoFilled /></el-icon>
+            <span v-if="kbForm.vectorModel === 'sentence-transformers'">
+              推荐使用，本地运行无需网络，支持中英文
+            </span>
+            <span v-else-if="kbForm.vectorModel === 'zhipu'">
+              中文文档推荐，需要配置智普AI API密钥
+            </span>
+            <span v-else-if="kbForm.vectorModel === 'openai'">
+              英文文档推荐，需要配置OpenAI API密钥
+            </span>
+          </div>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-switch
@@ -162,9 +206,25 @@
         <el-form-item label="标签" prop="tags">
           <el-input
             v-model="kbForm.tagsInput"
-            placeholder="请输入标签，用逗号分隔"
+            placeholder="请输入标签，用逗号分隔（最多10个标签，每个标签最多20个字符）"
             @blur="handleTagsBlur"
+            @input="handleTagsInput"
+            maxlength="200"
+            show-word-limit
           />
+          <div class="tags-preview" v-if="kbForm.tags.length > 0">
+            <span class="tags-label">当前标签：</span>
+            <el-tag
+              v-for="(tag, index) in kbForm.tags"
+              :key="index"
+              size="small"
+              closable
+              @close="removeTag(index)"
+              class="preview-tag"
+            >
+              {{ tag }}
+            </el-tag>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -353,7 +413,8 @@ import {
   Delete,
   Upload,
   Folder,
-  UploadFilled
+  UploadFilled,
+  InfoFilled
 } from '@element-plus/icons-vue'
 import { 
   listKb, 
@@ -413,19 +474,91 @@ const kbForm = reactive({
   id: '',
   name: '',
   description: '',
-  vectorModel: 'openai',
+  vectorModel: 'sentence-transformers',
   status: true,
   tags: [] as string[],
   tagsInput: ''
 })
 
+// 模型启用状态检查
+const zhipuEnabled = ref(true) // 默认启用，实际应该从配置或API获取
+const openaiEnabled = ref(true) // 默认启用，实际应该从配置或API获取
+
+// 检查模型可用性
+const checkModelAvailability = async () => {
+  try {
+    // 这里可以调用API检查模型是否可用
+    // 暂时设置为默认值
+    zhipuEnabled.value = true
+    openaiEnabled.value = true
+    
+    // TODO: 实现真实的模型状态检查API
+    // const modelStatus = await checkModelStatus()
+    // zhipuEnabled.value = modelStatus.zhipu
+    // openaiEnabled.value = modelStatus.openai
+  } catch (error) {
+    console.warn('检查模型可用性失败:', error)
+    // 失败时默认启用所有模型
+    zhipuEnabled.value = true
+    openaiEnabled.value = true
+  }
+}
+
+// 检查模型状态的API调用（待实现）
+const checkModelStatus = async () => {
+  try {
+    // 这里应该调用后端API来检查各个模型的可用性
+    // 例如：检查API密钥是否配置、服务是否可用等
+    const response = await fetch('/api/models/status')
+    if (response.ok) {
+      return await response.json()
+    }
+    throw new Error('检查模型状态失败')
+  } catch (error) {
+    console.error('检查模型状态失败:', error)
+    throw error
+  }
+}
+
 // 表单验证规则
 const kbFormRules = {
   name: [
-    { required: true, message: '请输入知识库名称', trigger: 'blur' }
+    { required: true, message: '请输入知识库名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '知识库名称长度应在2-50个字符之间', trigger: 'blur' }
+  ],
+  description: [
+    { max: 200, message: '描述长度不能超过200个字符', trigger: 'blur' }
   ],
   vectorModel: [
-    { required: true, message: '请选择向量模型', trigger: 'change' }
+    { required: true, message: '请选择向量模型', trigger: 'change' },
+    { 
+      validator: (rule: any, value: string, callback: Function) => {
+        if (!value) {
+          callback(new Error('请选择向量模型'))
+        } else if (value === 'zhipu' && !zhipuEnabled.value) {
+          callback(new Error('智普向量模型当前不可用'))
+        } else if (value === 'openai' && !openaiEnabled.value) {
+          callback(new Error('OpenAI向量模型当前不可用'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'change' 
+    }
+  ],
+  tags: [
+    { 
+      validator: (rule: any, value: string[], callback: Function) => {
+        if (value && value.length > 10) {
+          callback(new Error('标签数量不能超过10个'))
+        } else if (value && value.some(tag => tag.length > 20)) {
+          callback(new Error('单个标签长度不能超过20个字符'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'blur' 
+    }
   ]
 }
 
@@ -597,7 +730,7 @@ const handleEdit = (kb: KnowledgeBaseSummary) => {
     id: kb.id,
     name: kb.name,
     description: kb.description || '',
-    vectorModel: kb.vectorModel || 'openai',
+    vectorModel: kb.vectorModel || 'sentence-transformers',
     status: kb.status !== false,
     tags: kb.tags || [],
     tagsInput: (kb.tags || []).join(',')
@@ -636,6 +769,23 @@ const handleSaveKb = async () => {
       await (kbFormRef.value as any).validate()
     }
     
+    // 验证模型选择
+    if (!kbForm.vectorModel) {
+      ElMessage.warning('请选择向量模型')
+      return
+    }
+    
+    // 检查模型可用性
+    if (kbForm.vectorModel === 'zhipu' && !zhipuEnabled.value) {
+      ElMessage.warning('智普向量模型当前不可用，请检查API配置')
+      return
+    }
+    
+    if (kbForm.vectorModel === 'openai' && !openaiEnabled.value) {
+      ElMessage.warning('OpenAI向量模型当前不可用，请检查API配置')
+      return
+    }
+    
     saving.value = true
     
     if (isEdit.value) {
@@ -647,7 +797,7 @@ const handleSaveKb = async () => {
         status: kbForm.status,
         tags: kbForm.tags
       })
-      ElMessage.success('更新成功')
+      ElMessage.success('知识库更新成功')
     } else {
       // 创建新知识库
       await createKb({
@@ -657,14 +807,28 @@ const handleSaveKb = async () => {
         status: kbForm.status,
         tags: kbForm.tags
       })
-      ElMessage.success('创建成功')
+      ElMessage.success('知识库创建成功')
     }
     
     kbDialogVisible.value = false
     getKbList()
-  } catch (error) {
+  } catch (error: any) {
     console.error('保存失败:', error)
-    ElMessage.error('保存失败')
+    
+    // 根据错误类型提供更友好的错误信息
+    if (error.response?.status === 400) {
+      ElMessage.error('请求参数错误，请检查输入内容')
+    } else if (error.response?.status === 401) {
+      ElMessage.error('认证失败，请检查API密钥配置')
+    } else if (error.response?.status === 403) {
+      ElMessage.error('权限不足，无法执行此操作')
+    } else if (error.response?.status === 409) {
+      ElMessage.error('知识库名称已存在，请使用其他名称')
+    } else if (error.message?.includes('Network Error')) {
+      ElMessage.error('网络连接失败，请检查网络设置')
+    } else {
+      ElMessage.error(`保存失败: ${error.message || '未知错误'}`)
+    }
   } finally {
     saving.value = false
   }
@@ -676,7 +840,7 @@ const resetKbForm = () => {
     id: '',
     name: '',
     description: '',
-    vectorModel: 'openai',
+    vectorModel: 'sentence-transformers',
     status: true,
     tags: [] as string[],
     tagsInput: ''
@@ -689,6 +853,41 @@ const handleTagsBlur = () => {
     kbForm.tags = kbForm.tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag)
   } else {
     kbForm.tags = []
+  }
+}
+
+// 处理标签输入变化
+const handleTagsInput = (value: string) => {
+  // 实时预览标签
+  kbForm.tagsInput = value
+  kbForm.tags = value.split(',').map(tag => tag.trim()).filter(tag => tag)
+}
+
+// 移除标签
+const removeTag = (index: number) => {
+  kbForm.tags.splice(index, 1)
+  kbForm.tagsInput = kbForm.tags.join(',')
+}
+
+// 处理向量模型选择变化
+const handleVectorModelChange = (value: string) => {
+  if (value === 'zhipu' && !zhipuEnabled.value) {
+    ElMessage.warning('智普向量模型当前不可用，请检查API密钥配置')
+    // 重置为默认模型
+    kbForm.vectorModel = 'sentence-transformers'
+    return
+  }
+  
+  if (value === 'openai' && !openaiEnabled.value) {
+    ElMessage.warning('OpenAI向量模型当前不可用，请检查API密钥配置')
+    // 重置为默认模型
+    kbForm.vectorModel = 'sentence-transformers'
+    return
+  }
+  
+  // 如果选择需要API密钥的模型，给出提醒
+  if (value === 'zhipu' || value === 'openai') {
+    ElMessage.info('您选择了需要API密钥的模型，请确保已正确配置相应的API密钥')
   }
 }
 
@@ -1013,6 +1212,7 @@ const formatTime = (time: string | Date) => {
 // 页面加载时获取数据
 onMounted(() => {
   getKbList()
+  checkModelAvailability() // 页面加载时检查模型可用性
 })
 </script>
 
@@ -1449,5 +1649,109 @@ onMounted(() => {
   display: inline-block;
   min-width: 16px;
   text-align: center;
+}
+
+/* 模型选择样式 */
+.model-option {
+  padding: 4px 0;
+}
+
+.model-name {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.model-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+}
+
+.field-help {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.field-help .el-icon {
+  color: #909399;
+  font-size: 14px;
+}
+
+.model-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #409eff;
+}
+
+.model-tip .el-icon {
+  margin-top: 1px;
+  font-size: 14px;
+}
+
+/* 模型选择下拉框样式优化 */
+:deep(.el-select-dropdown__item) {
+  padding: 8px 12px;
+}
+
+:deep(.el-select-dropdown__item.selected) {
+  background-color: #f0f9ff;
+  color: #409eff;
+}
+
+:deep(.el-select-dropdown__item:hover) {
+  background-color: #f5f7fa;
+}
+
+/* 禁用的模型选项样式 */
+:deep(.el-select-dropdown__item.is-disabled) {
+  color: #c0c4cc;
+  background-color: #f5f7fa;
+}
+
+:deep(.el-select-dropdown__item.is-disabled .model-name) {
+  color: #c0c4cc;
+}
+
+:deep(.el-select-dropdown__item.is-disabled .model-desc) {
+  color: #c0c4cc;
+}
+
+/* 标签预览样式 */
+.tags-preview {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.tags-label {
+  font-size: 12px;
+  color: #909399;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.preview-tag {
+  margin: 2px 4px 2px 0;
+}
+
+.preview-tag:last-child {
+  margin-right: 0;
 }
 </style> 
