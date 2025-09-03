@@ -296,6 +296,14 @@ async function nextTickInit() {
   lf = new LogicFlow({
     container: el,
     grid: true,
+    enableMobx: false,
+    nodeTextEdit: false,
+    edgeTextEdit: false,
+    enableTextEdit: false,
+    enableHistory: false,
+    enableSilentMode: true,
+    width: el.offsetWidth,
+    height: el.offsetHeight
   })
   registerNodes()
   const graph = await getFlowGraph(currentFlowId.value).catch(() => emptyGraph())
@@ -307,6 +315,7 @@ async function nextTickInit() {
     })),
     edges: (graph?.edges || []).map((e: any) => ({
       id: e.id || `e-${genId()}`,
+      type: 'polyline',
       sourceNodeId: e.sourceNodeId,
       targetNodeId: e.targetNodeId,
       label: e.label
@@ -388,7 +397,7 @@ function onChooseAddFor(
   } else if (type === 'end') {
     lf.addNode({ id: newId, type: 'rect', x: baseX + 180, y: baseY, text: '结束', properties: { role: 'end' } })
   }
-  lf.addEdge({ sourceNodeId: sourceId, targetNodeId: newId })
+  lf.addEdge({ type: 'polyline', sourceNodeId: sourceId, targetNodeId: newId })
   updateNodePlusOverlays()
 }
 
@@ -412,7 +421,7 @@ function saveFlow() {
       type: node.type,
       x: typeof node.x === 'number' ? node.x : 0,
       y: typeof node.y === 'number' ? node.y : 0,
-      text: typeof node.text === 'string' ? node.text : (node.text ? JSON.stringify(node.text) : ''),
+      text: typeof node.text === 'object' ? node.text.value : ''/* (node.text ? JSON.stringify(node.text) : '') */,
       properties: node.properties || {}
     })),
     edges: (rawData.edges || []).map((edge: any) => ({
