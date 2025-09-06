@@ -44,16 +44,15 @@
     </el-card>
 
     <div v-else class="editor-wrap">
+      <div class="editor-toolbar">
+        <el-button @click="backToList">返回</el-button>
+        <el-button type="primary" @click="saveFlow">保存</el-button>
+        <el-divider direction="vertical" />
+        <el-button @click="addStart">开始</el-button>
+        <el-button @click="addLLM">LLM</el-button>
+      </div>
       <div class="editor-body">
         <div class="canvas-wrap" ref="canvasWrapRef">
-          <!-- 画布内工具栏 -->
-          <div class="canvas-toolbar">
-            <el-button @click="backToList">返回</el-button>
-            <el-button type="primary" @click="saveFlow">保存</el-button>
-            <el-divider direction="vertical" />
-            <el-button @click="addStart">开始</el-button>
-            <el-button @click="addLLM">LLM</el-button>
-          </div>
           <div class="canvas" ref="canvasRef"></div>
           <!-- Per-node right-side plus buttons -->
           <div
@@ -398,6 +397,7 @@ function emptyGraph() { return { nodes: [], edges: [] } }
 .flow-card.create { display: flex; align-items: center; justify-content: center; color: var(--el-color-primary); }
 .flow-card .card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .editor-wrap { height: calc(100vh - 140px); display: flex; flex-direction: column; }
+.editor-toolbar { background: #fff; padding: 8px; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; margin-bottom: 8px; }
 .editor-body { display: grid; grid-template-columns: 1fr 320px; gap: 8px; height: 100%; }
 .canvas-wrap { position: relative; }
 .canvas { background: #fff; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; height: 100%; }
@@ -405,32 +405,4 @@ function emptyGraph() { return { nodes: [], edges: [] } }
 .desc { color: #909399; }
 .add-menu { display: flex; flex-direction: column; gap: 4px; }
 .node-plus { position: absolute; z-index: 100; }
-
-/* 画布内工具栏样式 */
-.canvas-toolbar {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.canvas-toolbar .el-button {
-  font-size: 12px;
-  padding: 6px 12px;
-  height: auto;
-}
-
-.canvas-toolbar .el-divider {
-  margin: 0 4px;
-  height: 20px;
-}
 </style>

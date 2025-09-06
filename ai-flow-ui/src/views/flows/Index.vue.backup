@@ -44,16 +44,15 @@
     </el-card>
 
     <div v-else class="editor-wrap">
+      <div class="editor-toolbar">
+        <el-button @click="backToList">返回</el-button>
+        <el-button type="primary" @click="saveFlow">保存</el-button>
+        <el-divider direction="vertical" />
+        <el-button @click="addStart">开始</el-button>
+        <el-button @click="addLLM">LLM</el-button>
+      </div>
       <div class="editor-body">
         <div class="canvas-wrap" ref="canvasWrapRef">
-          <!-- 画布内工具栏 -->
-          <div class="canvas-toolbar">
-            <el-button @click="backToList">返回</el-button>
-            <el-button type="primary" @click="saveFlow">保存</el-button>
-            <el-divider direction="vertical" />
-            <el-button @click="addStart">开始</el-button>
-            <el-button @click="addLLM">LLM</el-button>
-          </div>
           <div class="canvas" ref="canvasRef"></div>
           <!-- Per-node right-side plus buttons -->
           <div
@@ -132,9 +131,8 @@ import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { listFlows, createFlow, getFlowGraph, saveFlowGraph, type FlowSummary, type FlowUpsertRequest, type FlowGraph } from '../../api/flows'
-import LogicFlow from '@logicflow/core'
+import LogicFlow, { RectNode, RectNodeModel, h } from '@logicflow/core'
 import { MiniMap, SelectionSelect, Control } from '@logicflow/extension'
-import { registerNodes } from './nodes'
 
 // Register LogicFlow plugins once (v2 uses static use)
 let pluginsRegistered = false
@@ -204,6 +202,62 @@ const selected = ref<any | null>(null)
 const nodeOverlays = ref<Array<{ id: string; left: string; top: string }>>([])
 const plusVisible = reactive<Record<string, boolean>>({})
 
+class LLMNodeModel extends RectNodeModel {
+  setAttributes() {
+    this.width = 140; this.height = 52
+  }
+}
+class LLMNodeView extends RectNode {
+  getShape() {
+    const { width, height, x, y, id } = this.props.model
+    const rect = h('rect', {
+      x: x - width / 2,
+      y: y - height / 2,
+      width,
+      height,
+      rx: 6,
+      ry: 6,
+      stroke: '#409eff',
+      fill: '#fff',
+      strokeWidth: 1
+    })
+    // plus button at right center
+    const r = 10
+    const cx = x + width / 2 + r + 2
+    const cy = y
+    const plusCircle = h('circle', {
+      cx,
+      cy,
+      r,
+      fill: '#409eff',
+      stroke: 'transparent'
+    })
+    const plusV = h('line', { x1: cx, y1: cy - 5, x2: cx, y2: cy + 5, stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round' })
+    const plusH = h('line', { x1: cx - 5, y1: cy, x2: cx + 5, y2: cy, stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round' })
+    const plusGroup = h('g', {
+      className: 'llm-plus-btn',
+      style: 'cursor: pointer;',
+      onClick: () => {
+        // emit a custom event for Vue layer to open the add menu for this node
+        ;(this as any).props?.model?.graphModel?.eventCenter?.emit('llm:plus-click', { id })
+      }
+    }, [plusCircle, plusV, plusH])
+    return h('g', {}, [rect, plusGroup])
+  }
+}
+
+class ClassifierNodeModel extends RectNodeModel {
+  setAttributes() {
+    this.width = 140; this.height = 52
+  }
+}
+class ClassifierNodeView extends RectNode {}
+
+function registerNodes() {
+  lf?.register({ type: 'llm', model: LLMNodeModel, view: LLMNodeView })
+  lf?.register({ type: 'classifier', model: ClassifierNodeModel, view: ClassifierNodeView })
+}
+
 function waitForCanvasReady(): Promise<HTMLDivElement> {
   return new Promise((resolve) => {
     const check = () => {
@@ -251,7 +305,7 @@ async function nextTickInit() {
     width: el.offsetWidth,
     height: el.offsetHeight
   })
-  registerNodes(lf)
+  registerNodes()
   const graph = await getFlowGraph(currentFlowId.value).catch(() => emptyGraph())
   const normalized = {
     nodes: (graph?.nodes || []).map((n: any) => ({
@@ -398,6 +452,7 @@ function emptyGraph() { return { nodes: [], edges: [] } }
 .flow-card.create { display: flex; align-items: center; justify-content: center; color: var(--el-color-primary); }
 .flow-card .card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .editor-wrap { height: calc(100vh - 140px); display: flex; flex-direction: column; }
+.editor-toolbar { background: #fff; padding: 8px; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; margin-bottom: 8px; }
 .editor-body { display: grid; grid-template-columns: 1fr 320px; gap: 8px; height: 100%; }
 .canvas-wrap { position: relative; }
 .canvas { background: #fff; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; height: 100%; }
@@ -405,32 +460,4 @@ function emptyGraph() { return { nodes: [], edges: [] } }
 .desc { color: #909399; }
 .add-menu { display: flex; flex-direction: column; gap: 4px; }
 .node-plus { position: absolute; z-index: 100; }
-
-/* 画布内工具栏样式 */
-.canvas-toolbar {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.canvas-toolbar .el-button {
-  font-size: 12px;
-  padding: 6px 12px;
-  height: auto;
-}
-
-.canvas-toolbar .el-divider {
-  margin: 0 4px;
-  height: 20px;
-}
-</style>
+</style> 
