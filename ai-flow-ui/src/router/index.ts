@@ -11,6 +11,9 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'apps/:id/edit', name: 'appEdit', component: () => import('../views/apps/AppEditor.vue'), props: true },
       { path: 'kb', name: 'kb', component: () => import('../views/kb/Index.vue') },
       { path: 'flows', name: 'flows', component: () => import('../views/flows/Index.vue') },
+      { path: 'flows/basic', name: 'flowsBasic', component: () => import('../views/flows/BasicTest.vue') },
+      { path: 'flows/simple', name: 'flowsSimple', component: () => import('../views/flows/SimpleFlowEditor.vue') },
+      { path: 'flows/test', name: 'flowsTest', component: () => import('../views/flows/LogicFlowTest.vue') },
       { path: 'models', name: 'models', component: () => import('../views/models/Index.vue') },
       { path: 'ocr', name: 'ocr', component: () => import('../views/ocr/Index.vue') },
     ]
